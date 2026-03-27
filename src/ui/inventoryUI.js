@@ -92,7 +92,7 @@ function refreshInventoryList() {
     el.className = 'inventory-item';
     el.innerHTML = `
       <div class="inv-item-name">${escapeHtml(item.name)}</div>
-      <div class="inv-item-type">${escapeHtml(item.partType)} · ${item.massKg}kg</div>
+      <div class="inv-item-type">${escapeHtml(item.partType)} · ${escapeHtml(String(item.massKg))}kg</div>
       <div class="inv-item-actions">
         <button class="inv-add-btn" data-id="${item.id}">Add to Scene</button>
         <button class="inv-export-btn" data-id="${item.id}">Export GLB</button>

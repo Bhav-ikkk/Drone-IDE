@@ -18,17 +18,28 @@ export function createFixedJoint(world, bodyA, bodyB) {
   const rotA = bodyA.rotation();
   const rotB = bodyB.rotation();
 
-  // Compute relative transform from A to B
-  // anchor1 in A's local space, anchor2 in B's local space
+  // Compute relative transform from A to B in A's local coordinate space
   const relX = posB.x - posA.x;
   const relY = posB.y - posA.y;
   const relZ = posB.z - posA.z;
 
+  // Transform world-space relative vector into bodyA's local frame
+  // Inverse quaternion rotation: q* v q^-1
+  const qw = rotA.w, qx = -rotA.x, qy = -rotA.y, qz = -rotA.z; // conjugate = inverse for unit quat
+  // Quaternion-vector multiply: q * v
+  const tx2 = qy * relZ - qz * relY + qw * relX;
+  const ty2 = qz * relX - qx * relZ + qw * relY;
+  const tz2 = qx * relY - qy * relX + qw * relZ;
+  const tw2 = -(qx * relX + qy * relY + qz * relZ);
+  const localX = tw2 * (-qx) + tx2 * qw + ty2 * (-qz) - tz2 * (-qy);
+  const localY = tw2 * (-qy) - tx2 * (-qz) + ty2 * qw + tz2 * (-qx);
+  const localZ = tw2 * (-qz) + tx2 * (-qy) - ty2 * (-qx) + tz2 * qw;
+
   const jointParams = RAPIER.JointData.fixed(
-    { x: relX, y: relY, z: relZ },  // anchor1 in bodyA local frame
-    { x: 0, y: 0, z: 0, w: 1 },     // frame1 rotation (identity)
-    { x: 0, y: 0, z: 0 },            // anchor2 in bodyB local frame
-    { x: 0, y: 0, z: 0, w: 1 }       // frame2 rotation (identity)
+    { x: localX, y: localY, z: localZ },  // anchor1 in bodyA local frame
+    { x: 0, y: 0, z: 0, w: 1 },            // frame1 rotation (identity)
+    { x: 0, y: 0, z: 0 },                   // anchor2 in bodyB local frame
+    { x: 0, y: 0, z: 0, w: 1 }              // frame2 rotation (identity)
   );
 
   const joint = world.createImpulseJoint(jointParams, bodyA, bodyB, true);

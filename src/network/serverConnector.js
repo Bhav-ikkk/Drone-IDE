@@ -53,9 +53,8 @@ export function connect(roomCode, serverUrl, onMessage) {
   userId = generateUUID();
   onMessageCallback = onMessage;
 
-  // Mock local server URL — replace with real server in production
-  // Example: wss://your-future-server.com/ws
-  const url = serverUrl || `wss://localhost:8080/ws?room=${sessionId}`;
+  // Default to ws:// for local development; production server URL should be explicitly provided
+  const url = serverUrl || `ws://localhost:8080/ws?room=${encodeURIComponent(sessionId)}`;
 
   try {
     ws = new WebSocket(url);

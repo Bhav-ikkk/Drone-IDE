@@ -27,7 +27,7 @@ class OneEuroFilter {
       return x;
     }
 
-    const dt = Math.max(t - this.tPrev, 1e-6);
+    const dt = Math.max(t - this.tPrev, 0.001);
     this.tPrev = t;
 
     // Derivative of signal
