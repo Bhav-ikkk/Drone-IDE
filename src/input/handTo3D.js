@@ -29,10 +29,12 @@ export function handTo3DPosition(landmark, camera) {
   // Unproject from camera through interaction plane
   raycaster.setFromCamera(screenCoord, camera);
 
-  // Place on a virtual plane at fixed distance from camera
+  // Place on a virtual plane at fixed distance in front of the camera.
+  // planeNormal is the camera's forward direction (into the scene).
+  // We use +interactionPlaneDistance to position the plane ahead of the camera.
   const planeNormal = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   const planePoint = camera.position.clone().add(
-    planeNormal.clone().multiplyScalar(-interactionPlaneDistance)
+    planeNormal.clone().multiplyScalar(interactionPlaneDistance)
   );
   const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
     planeNormal, planePoint
@@ -42,8 +44,11 @@ export function handTo3DPosition(landmark, camera) {
   const hit = raycaster.ray.intersectPlane(plane, intersectPoint);
   if (!hit) return virtualCursor.clone();
 
-  // Apply depth from hand z-coordinate (closer hand = deeper into scene)
-  const depthOffset = Number.isFinite(landmark.z) ? landmark.z * 5 : 0;
+  // Apply depth from hand z-coordinate (closer hand = closer cursor).
+  // Clamp to [-1.0, 0.8] to prevent the cursor from going behind the camera
+  // or too far outside the visible scene.
+  const rawDepth = Number.isFinite(landmark.z) ? landmark.z * 5 : 0;
+  const depthOffset = Math.max(-1.0, Math.min(0.8, rawDepth));
   intersectPoint.add(planeNormal.clone().multiplyScalar(depthOffset));
 
   if (
