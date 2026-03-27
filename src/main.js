@@ -14,6 +14,7 @@ import { initMediaPipe, detectHands } from './input/mediapipe.js';
 import { detectGesture } from './input/gestures.js';
 import { handTo3DPosition } from './input/handTo3D.js';
 import { smoothLandmarks, resetFilters } from './input/smoothing.js';
+import { initVoiceAssistant, speak as voiceSpeak } from './input/voiceAssistant.js';
 
 // Drone
 import {
@@ -26,12 +27,13 @@ import {
 import { assembleStep, disassembleStep } from './drone/snapping.js';
 import { startFlight, stopFlight, isFlying, updateFlight, updatePropellers } from './drone/flight.js';
 import { applyMotorTorque } from './drone/torqueSystem.js';
+import { getPartDescription } from './drone/partDescriptions.js';
 
 // UI
 import { updateHUD } from './ui/hud.js';
 import { createLabels, updateLabels, setLabelsVisible } from './ui/labels.js';
 import { createOverlays, updateOverlays, toggleOverlays } from './ui/overlays.js';
-import { initInfoPanel, showPartInfo } from './ui/infoPanel.js';
+import { initInfoPanel, showPartInfo, getSelectedPartId, isInfoPanelOpen } from './ui/infoPanel.js';
 import { initInventoryUI, toggleInventoryPanel } from './ui/inventoryUI.js';
 
 // Utils
@@ -46,6 +48,9 @@ let mediaPipeReady = false;
 let currentGesture = 'NONE';
 let appState = 'IDLE'; // IDLE, ASSEMBLING, ASSEMBLED, FLYING, DISASSEMBLING
 let prevSmoothedLandmarks = null;
+
+// Voice assistant
+let voiceStatus = 'WAITING'; // WAITING | ACTIVE | SPEAKING | UNSUPPORTED
 
 // Drag state
 let draggedPart = null;
@@ -247,6 +252,10 @@ async function init() {
       await initMediaPipe(video);
       mediaPipeReady = true;
       allowBtn.textContent = 'Camera Enabled';
+
+      // Start voice assistant now that the user has interacted with the page
+      // (required by browser autoplay / speech policies).
+      _initVoice();
     } catch (err) {
       console.error('Camera unavailable, continuing with mouse controls:', err);
       mediaPipeReady = false;
@@ -254,6 +263,7 @@ async function init() {
       initAudio();
       allowBtn.textContent = 'Using Mouse Controls';
       allowBtn.style.background = 'linear-gradient(135deg, #ff4444, #cc0000)';
+      _initVoice();
     }
   });
 
@@ -261,6 +271,7 @@ async function init() {
     mediaPipeReady = false;
     cameraOverlay.classList.add('hidden');
     initAudio();
+    _initVoice();
   });
 
   setupMouseControls(canvas);
@@ -280,6 +291,81 @@ async function init() {
   // Start loop
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
+}
+
+// ========== VOICE ASSISTANT ==========
+function _initVoice() {
+  const indicator = document.getElementById('voice-indicator');
+  initVoiceAssistant({
+    onStatusChange: (status) => {
+      voiceStatus = status;
+      if (!indicator) return;
+      indicator.dataset.status = status;
+      const labels = {
+        WAITING: '🎤 Listening…',
+        ACTIVE: '🗣️ Active',
+        SPEAKING: '💬 Speaking…',
+        UNSUPPORTED: '🚫 Voice N/A',
+      };
+      indicator.textContent = labels[status] || '🎤';
+    },
+    onCommand: _handleVoiceCommand,
+  });
+}
+
+function _handleVoiceCommand(command) {
+  switch (command) {
+    case 'DESCRIBE': {
+      const partId = getSelectedPartId();
+      if (!partId) {
+        voiceSpeak('No component is selected. Click on a drone part first, then say describe.');
+        return;
+      }
+      const desc = getPartDescription(partId);
+      if (!desc) {
+        voiceSpeak('Sorry, I could not find a description for that part.');
+        return;
+      }
+      // Speak name + truncated overview so the response stays snappy.
+      const overview = desc.overview
+        ? desc.overview.replace(/\n/g, ' ').slice(0, 280)
+        : '';
+      voiceSpeak(`${desc.name}. ${overview}`);
+      break;
+    }
+    case 'ASSEMBLE':
+      if (isFlying()) {
+        voiceSpeak('The drone is currently flying. Land it first.');
+      } else if (isAssembled()) {
+        voiceSpeak('The drone is already assembled.');
+      } else {
+        voiceSpeak('Assembling the drone now.');
+        assembleStep(getWorld());
+      }
+      break;
+    case 'FLY':
+      if (isFlying()) {
+        voiceSpeak('Already flying.');
+      } else if (isAssembled()) {
+        voiceSpeak('Initiating flight.');
+        startFlight();
+        appState = 'FLYING';
+      } else {
+        voiceSpeak('The drone must be assembled before it can take off.');
+      }
+      break;
+    case 'LAND':
+      if (!isFlying()) {
+        voiceSpeak('The drone is not currently flying.');
+      } else {
+        voiceSpeak('Landing now.');
+        stopFlight();
+        appState = 'ASSEMBLED';
+      }
+      break;
+    default:
+      break;
+  }
 }
 
 // ========== GAME LOOP ==========
@@ -412,11 +498,13 @@ function handleGestureState(gestureData, dt) {
         if (isAssembled()) {
           appState = 'ASSEMBLED';
           playSnapSound();
+          gestureHoldTime = 0;
         }
       } else if (isAssembled() && !isFlying()) {
         // Fist while assembled → start flight
         appState = 'FLYING';
         startFlight();
+        gestureHoldTime = 0;
       }
       break;
 
@@ -424,11 +512,15 @@ function handleGestureState(gestureData, dt) {
       if (isFlying()) {
         stopFlight();
         appState = 'ASSEMBLED';
+        // Reset hold timer so the same gesture can't immediately cascade
+        // into disassembly on the very next frame.
+        gestureHoldTime = 0;
       } else if (isAssembled()) {
         appState = 'DISASSEMBLING';
         disassembleStep(getWorld());
         playWhooshSound();
         appState = 'IDLE';
+        gestureHoldTime = 0;
       }
       // Release drag
       if (isDragging && dragSource === 'HAND') releaseDrag();
