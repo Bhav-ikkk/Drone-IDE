@@ -40,7 +40,9 @@ const MAX_HISTORY = 4;
 export function detectGesture(landmarks, worldLandmarks) {
   if (!landmarks || landmarks.length < 21) return { gesture: 'NONE', landmarks, worldLandmarks };
 
-  const lm = worldLandmarks || landmarks;
+  // Use screen-space landmarks for distance checks – thresholds are calibrated
+  // for the 0-1 normalised coordinate range that rawLandmarks provide.
+  const lm = landmarks;
   if (!Array.isArray(lm) || lm.length < 21) return { gesture: 'NONE', landmarks, worldLandmarks };
   if (!isValidPoint(lm[THUMB_TIP]) || !isValidPoint(lm[INDEX_TIP]) || !isValidPoint(lm[MIDDLE_TIP])) {
     motionHistory.length = 0;

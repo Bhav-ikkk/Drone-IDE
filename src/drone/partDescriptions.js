@@ -726,6 +726,139 @@ export const partDescriptions = {
       loaderNote: 'Load with THREE.GLTFLoader. Position at snapPosition (x:0, y:0.88, z:0.52) facing positive Z (front of drone). Apply a 25–30° rotation around X-axis to simulate upward camera tilt. The lens glass mesh should be a separate mesh with the transparent material applied in Three.js post-load.',
     },
   },
+
+  esc: {
+    name: 'Electronic Speed Controller (4-in-1 ESC)',
+    icon: '⚡',
+    category: 'Electronics',
+    overview: `The ESC converts DC battery power into precisely timed 3-phase AC signals to drive brushless motors. A 4-in-1 ESC integrates all four motor controllers onto a single board, saving weight and wiring.\n\nIt receives throttle commands from the Flight Controller via DShot protocol up to 150,000 times per second, and adjusts motor RPM accordingly. Modern ESCs run BLHeli_32 firmware with features like active braking, RPM telemetry, and dynamic motor timing.`,
+    specifications: [
+      { label: 'Type', value: '4-in-1 Stack (30.5×30.5mm)' },
+      { label: 'Continuous Current', value: '55A per motor' },
+      { label: 'Burst Current', value: '65A (10s)' },
+      { label: 'Firmware', value: 'BLHeli_32' },
+      { label: 'Protocol', value: 'DShot600 / DShot1200' },
+      { label: 'Input Voltage', value: '3-6S LiPo (11.1–25.2V)' },
+      { label: 'MOSFETs', value: '8× N-channel (low-side + high-side)' },
+      { label: 'Weight', value: '~12g' },
+    ],
+    whyChosen: `A 4-in-1 ESC simplifies wiring, reduces weight, and provides centralized current management. DShot protocol eliminates calibration and provides digital noise-immunity.`,
+    useCase: `Controls the speed and direction of all four motors. Essential for any multirotor — without the ESC, the flight controller cannot command motors.`,
+    alternatives: [
+      { name: 'Individual ESCs', desc: 'One ESC per arm — easier to replace a single failed unit' },
+      { name: 'BLHeli_S ESC', desc: 'Older 8-bit firmware, cheaper but fewer features' },
+      { name: 'AM32 ESC', desc: 'Open-source 32-bit alternative to BLHeli_32' },
+    ],
+    failureModes: [
+      'MOSFET burnout from sustained overcurrent or hard shorts',
+      'Desync — motor stutters when ESC loses commutation timing',
+      'Capacitor failure from voltage spikes during aggressive flying',
+      'Solder pad detachment from vibration or crash impact',
+    ],
+    limitations: [
+      'Single point of failure — if one channel dies, you lose the whole board',
+      'Heat dissipation limited by small PCB area',
+      'Must match ESC current rating to motor draw',
+    ],
+  },
+
+  vtx: {
+    name: 'Video Transmitter (VTX)',
+    icon: '📡',
+    category: 'FPV System',
+    overview: `The VTX broadcasts live analog or digital video from the drone camera to your FPV goggles on the ground. It operates on 5.8 GHz with selectable channels and power levels.\n\nModern VTXs support SmartAudio or Tramp protocols, allowing the flight controller to remotely change channel, power level, and pit mode. Power ranges from 25mW (pit mode / close range) to 800mW+ (long range).`,
+    specifications: [
+      { label: 'Frequency', value: '5.8 GHz (5 bands × 8 channels)' },
+      { label: 'Power Levels', value: '25mW / 100mW / 400mW / 800mW' },
+      { label: 'Protocol', value: 'SmartAudio V2.1' },
+      { label: 'Input Voltage', value: '7–26V DC' },
+      { label: 'Connector', value: 'MMCX / u.FL' },
+      { label: 'Weight', value: '~6g (board only)' },
+    ],
+    whyChosen: `Analog VTX provides the lowest latency for FPV racing (<1ms glass-to-glass). The multi-power selection allows legal compliance and range flexibility.`,
+    useCase: `Required for FPV (First Person View) flying. Pilots see real-time video in their goggles as if sitting in the drone cockpit.`,
+    alternatives: [
+      { name: 'DJI O4 Digital', desc: 'HD digital link — better image quality but higher latency (~30ms)' },
+      { name: 'HDZero', desc: 'Low-latency digital system — closest to analog speeds with HD image' },
+      { name: 'Walksnail Avatar', desc: 'Digital system with recording and OSD overlay' },
+    ],
+    failureModes: [
+      'RF amplifier burns out if powered without antenna connected',
+      'Overheating at max power without airflow causes thermal shutdown',
+      'Channel interference from nearby VTXs on same frequency',
+    ],
+    limitations: [
+      'Analog signal degrades with distance (static/noise)',
+      'Must have antenna connected before powering on',
+      'Higher power = more heat and battery drain',
+    ],
+  },
+
+  gps: {
+    name: 'GPS Module (GNSS Receiver)',
+    icon: '🛰️',
+    category: 'Navigation',
+    overview: `The GPS module receives satellite signals from GPS, GLONASS, BeiDou, and Galileo constellations to determine the drone's position, altitude, and ground speed. It provides position hold, return-to-home, and waypoint navigation capabilities.\n\nThe ceramic patch antenna faces skyward and must have a clear view of the sky. A magnetometer (compass) is often integrated to provide heading information independent of flight direction.`,
+    specifications: [
+      { label: 'Chipset', value: 'u-blox M10 (or BN-880 equivalent)' },
+      { label: 'Constellations', value: 'GPS + GLONASS + BeiDou + Galileo' },
+      { label: 'Accuracy', value: '±1.5m CEP (horizontal)' },
+      { label: 'Update Rate', value: '10 Hz' },
+      { label: 'Cold Start', value: '~26 seconds' },
+      { label: 'Hot Start', value: '<1 second' },
+      { label: 'Compass', value: 'Integrated QMC5883L magnetometer' },
+      { label: 'Weight', value: '~10g (with mast)' },
+    ],
+    whyChosen: `Multi-constellation GNSS provides fast fix times and better accuracy in urban environments. The integrated compass simplifies wiring.`,
+    useCase: `Enables autonomous flight modes: return-to-home, position hold, waypoint missions, and geofencing safety features.`,
+    alternatives: [
+      { name: 'u-blox M9N', desc: 'Previous generation — slightly cheaper, fewer constellations' },
+      { name: 'RTK GPS', desc: 'Centimeter-precision using correction signals — survey/mapping grade' },
+      { name: 'ublox F9P', desc: 'Dual-band RTK receiver for professional surveying drones' },
+    ],
+    failureModes: [
+      'Compass interference from nearby high-current wires or motors',
+      'No fix indoors or under dense foliage/urban canyons',
+      'Position drift during GPS glitches can cause flyaway',
+    ],
+    limitations: [
+      'Requires clear sky view — does not work indoors',
+      'Compass must be calibrated and mounted far from magnetic interference',
+      'Position accuracy varies with satellite geometry (PDOP)',
+    ],
+  },
+
+  antenna: {
+    name: '5.8 GHz Antenna (Pagoda LHCP)',
+    icon: '📶',
+    category: 'FPV System',
+    overview: `The antenna radiates the video signal from the VTX to the pilot's goggles. A circularly polarized design (LHCP or RHCP) rejects multipath reflections and provides consistent signal in any orientation.\n\nThe Pagoda design uses two stacked PCB radiating elements for a nearly omnidirectional radiation pattern. The SMA connector threads onto the VTX's output jack.`,
+    specifications: [
+      { label: 'Frequency', value: '5.8 GHz (5.6–6.0 GHz bandwidth)' },
+      { label: 'Polarization', value: 'LHCP (Left-Hand Circular)' },
+      { label: 'Gain', value: '2.1 dBi (omnidirectional)' },
+      { label: 'Connector', value: 'SMA Male' },
+      { label: 'VSWR', value: '< 1.5:1 across band' },
+      { label: 'Weight', value: '~5g' },
+    ],
+    whyChosen: `Circular polarization matches the goggle antenna, reducing signal loss from antenna orientation changes during acrobatic flight.`,
+    useCase: `Transmits live video feed from the drone to FPV goggles on the ground. Must match polarization (LHCP/RHCP) with the receiving antenna.`,
+    alternatives: [
+      { name: 'Dipole Whip', desc: 'Simplest, cheapest — linear polarization with 3dB polarization loss' },
+      { name: 'Cherry Antenna', desc: 'Stubby omnidirectional — very durable for racing' },
+      { name: 'Patch/Crosshair', desc: 'Directional high-gain — for long range in one direction' },
+    ],
+    failureModes: [
+      'SMA connector damage from crash impact',
+      'PCB element cracks from repeated bends',
+      'Coax cable break at solder joint',
+    ],
+    limitations: [
+      'Omnidirectional = lower gain compared to directional antennas',
+      'Protrudes from frame — vulnerable to crashes',
+      'Must be mounted away from carbon fiber (RF shielding)',
+    ],
+  },
 };
 
 /**

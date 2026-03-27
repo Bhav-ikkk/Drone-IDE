@@ -28,6 +28,7 @@ import { assembleStep, disassembleStep } from './drone/snapping.js';
 import { startFlight, stopFlight, isFlying, updateFlight, updatePropellers } from './drone/flight.js';
 import { applyMotorTorque } from './drone/torqueSystem.js';
 import { getPartDescription } from './drone/partDescriptions.js';
+import { enterFunZone, exitFunZone, updateFunZone, isFunZoneActive } from './drone/funZone.js';
 
 // UI
 import { updateHUD } from './ui/hud.js';
@@ -35,9 +36,10 @@ import { createLabels, updateLabels, setLabelsVisible } from './ui/labels.js';
 import { createOverlays, updateOverlays, toggleOverlays } from './ui/overlays.js';
 import { initInfoPanel, showPartInfo, getSelectedPartId, isInfoPanelOpen } from './ui/infoPanel.js';
 import { initInventoryUI, toggleInventoryPanel } from './ui/inventoryUI.js';
+import { toggleDataFlowOverlay } from './ui/dataFlowOverlay.js';
 
 // Utils
-import { initDebug, toggleDebug } from './utils/debug.js';
+import { initDebug, toggleDebug, updateDebug } from './utils/debug.js';
 
 // Network
 import { connect as serverConnect, disconnect as serverDisconnect, isConnected, broadcastDroneState } from './network/serverConnector.js';
@@ -278,14 +280,33 @@ async function init() {
 
   // Keyboard shortcuts
   window.addEventListener('keydown', (e) => {
+    // Skip shortcuts when user is typing in an input field
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+
     if (e.key === 'o' || e.key === 'O') toggleOverlays();
     if (e.key === 'l' || e.key === 'L') setLabelsVisible(true);
     if (e.key === 'f' || e.key === 'F') {
-      if (isAssembled() && !isFlying()) startFlight();
-      else if (isFlying()) stopFlight();
+      if (isAssembled() && !isFlying()) {
+        startFlight();
+        appState = 'FLYING';
+      } else if (isFlying()) {
+        stopFlight();
+        appState = 'ASSEMBLED';
+      }
     }
     if (e.key === 'i' || e.key === 'I') toggleInventoryPanel();
     if (e.key === 'd' || e.key === 'D') toggleDebug();
+    if (e.key === 'n' || e.key === 'N') toggleDataFlowOverlay();
+    if (e.key === 'g' || e.key === 'G') {
+      if (isFunZoneActive()) {
+        exitFunZone(scene);
+        appState = 'IDLE';
+      } else {
+        enterFunZone(scene, getDroneParts(), camera);
+        appState = 'FUN_ZONE';
+      }
+    }
   });
 
   // Start loop
@@ -314,6 +335,7 @@ function _initVoice() {
 }
 
 function _handleVoiceCommand(command) {
+  const controls = getControls();
   switch (command) {
     case 'DESCRIBE': {
       const partId = getSelectedPartId();
@@ -361,6 +383,55 @@ function _handleVoiceCommand(command) {
         voiceSpeak('Landing now.');
         stopFlight();
         appState = 'ASSEMBLED';
+      }
+      break;
+    case 'ZOOM_IN':
+      if (controls) {
+        const dir = new THREE.Vector3().subVectors(controls.target, camera.position);
+        camera.position.addScaledVector(dir, 0.2);
+        controls.update();
+      }
+      break;
+    case 'ZOOM_OUT':
+      if (controls) {
+        const dir = new THREE.Vector3().subVectors(camera.position, controls.target);
+        camera.position.addScaledVector(dir, 0.3);
+        controls.update();
+      }
+      break;
+    case 'DISASSEMBLE':
+      if (isFlying()) {
+        voiceSpeak('Land the drone before disassembling.');
+      } else if (!isAssembled()) {
+        voiceSpeak('The drone is not assembled.');
+      } else {
+        voiceSpeak('Disassembling.');
+        disassembleStep(getWorld());
+        playWhooshSound();
+        appState = 'IDLE';
+      }
+      break;
+    case 'HOVER':
+      if (isFlying()) {
+        voiceSpeak('Holding position.');
+      } else {
+        voiceSpeak('The drone must be flying to hover.');
+      }
+      break;
+    case 'ENTER_FUN_ZONE':
+      if (!isFunZoneActive()) {
+        enterFunZone(scene, getDroneParts(), camera);
+        appState = 'FUN_ZONE';
+      } else {
+        voiceSpeak('Already in the fun zone.');
+      }
+      break;
+    case 'EXIT_FUN_ZONE':
+      if (isFunZoneActive()) {
+        exitFunZone(scene);
+        appState = 'IDLE';
+      } else {
+        voiceSpeak('You are not in the fun zone.');
       }
       break;
     default:
@@ -444,6 +515,9 @@ function gameLoop(timestamp) {
     updatePropellers(frameTime, false);
   }
 
+  // ---- FUN ZONE ----
+  updateFunZone(frameTime, getDroneParts(), now / 1000);
+
   // ---- SYNC ----
   syncMeshesToBodies();
 
@@ -460,6 +534,7 @@ function gameLoop(timestamp) {
   updateOverlays(getDroneParts(), scene);
   updateCamera(frameTime, getDroneCenter());
   updateHUD(frameTime, currentGesture, appState, mediaPipeReady ? 'GESTURE' : 'MOUSE');
+  updateDebug(getDroneParts(), currentGesture, appState, 1 / Math.max(frameTime, 0.001));
 
   // ---- RENDER ----
   try {

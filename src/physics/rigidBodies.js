@@ -16,6 +16,10 @@ const PART_PHYSICS = {
   battery:          { mass: 0.25, linDamp: 0.6, angDamp: 1.5, restitution: 0.10, friction: 0.8 },
   flightController: { mass: 0.04, linDamp: 1.0, angDamp: 2.5, restitution: 0.15, friction: 0.5 },
   camera:           { mass: 0.06, linDamp: 0.8, angDamp: 2.0, restitution: 0.20, friction: 0.5 },
+  esc:              { mass: 0.04, linDamp: 1.0, angDamp: 2.5, restitution: 0.12, friction: 0.5 },
+  vtx:              { mass: 0.02, linDamp: 1.0, angDamp: 2.4, restitution: 0.15, friction: 0.5 },
+  gps:              { mass: 0.03, linDamp: 1.1, angDamp: 2.6, restitution: 0.10, friction: 0.5 },
+  antenna:          { mass: 0.01, linDamp: 1.3, angDamp: 3.0, restitution: 0.25, friction: 0.3 },
 };
 
 function getPartPhysics(partId) {

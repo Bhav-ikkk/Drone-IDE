@@ -648,5 +648,348 @@ export function createPartDefinitions() {
     spawnOffset: { x: -1, y: 2.5, z: 2 },
   });
 
+  // ===== ESC (Electronic Speed Controller) =====
+  parts.push({
+    id: 'esc',
+    label: 'ESC (4-in-1)',
+    createMesh: () => {
+      const group = new THREE.Group();
+
+      // Main PCB
+      const board = new THREE.Mesh(
+        new THREE.BoxGeometry(0.52, 0.04, 0.52),
+        Materials.pcbGreen()
+      );
+      group.add(board);
+
+      // Large MOSFETs (power transistors)
+      for (let row = 0; row < 2; row++) {
+        for (let col = 0; col < 4; col++) {
+          const mosfet = new THREE.Mesh(
+            new THREE.BoxGeometry(0.06, 0.025, 0.05),
+            Materials.chipBlack()
+          );
+          mosfet.position.set(-0.15 + col * 0.1, 0.032, -0.12 + row * 0.24);
+          group.add(mosfet);
+        }
+      }
+
+      // Electrolytic capacitor (big cylinder)
+      const bigCap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.04, 0.1, 12),
+        Materials.metalDark()
+      );
+      bigCap.position.set(0.18, 0.07, 0.14);
+      group.add(bigCap);
+
+      // Current sense resistors (small)
+      for (let i = 0; i < 4; i++) {
+        const resistor = new THREE.Mesh(
+          new THREE.BoxGeometry(0.03, 0.015, 0.05),
+          Materials.metalDark()
+        );
+        resistor.position.set(-0.15 + i * 0.1, 0.03, 0.06);
+        group.add(resistor);
+      }
+
+      // Motor output solder pads (4 sets × 3 wires)
+      for (let m = 0; m < 4; m++) {
+        const angle = (m / 4) * Math.PI * 2 + Math.PI / 4;
+        const r = 0.2;
+        for (let w = 0; w < 3; w++) {
+          const pad = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.012, 0.012, 0.006, 8),
+            Materials.goldPin()
+          );
+          pad.position.set(Math.cos(angle) * r + (w - 1) * 0.025, 0.024, Math.sin(angle) * r);
+          group.add(pad);
+        }
+      }
+
+      // Power input pads
+      const positivePad = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.006, 8),
+        Materials.redWire()
+      );
+      positivePad.position.set(-0.2, 0.024, -0.2);
+      group.add(positivePad);
+
+      const negativePad = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.006, 8),
+        Materials.blackWire()
+      );
+      negativePad.position.set(-0.15, 0.024, -0.2);
+      group.add(negativePad);
+
+      // Signal connector
+      const signalConn = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 0.04, 0.03),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 })
+      );
+      signalConn.position.set(0.2, 0.04, -0.2);
+      group.add(signalConn);
+
+      // Copper traces
+      for (let i = 0; i < 4; i++) {
+        const trace = new THREE.Mesh(
+          new THREE.BoxGeometry(0.4, 0.002, 0.006),
+          Materials.copper()
+        );
+        trace.position.set(0, 0.022, -0.1 + i * 0.065);
+        group.add(trace);
+      }
+
+      setShadows(group);
+      return group;
+    },
+    snapPosition: { x: 0, y: 1.06, z: 0 },
+    snapRotation: { x: 0, y: 0, z: 0, w: 1 },
+    colliderType: 'cuboid',
+    colliderArgs: [0.26, 0.03, 0.26],
+    mass: 0.25,
+    spawnOffset: { x: 3, y: 2, z: -1.5 },
+  });
+
+  // ===== VTX (Video Transmitter) =====
+  parts.push({
+    id: 'vtx',
+    label: 'Video Transmitter',
+    createMesh: () => {
+      const group = new THREE.Group();
+
+      // Main PCB board
+      const board = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, 0.04, 0.25),
+        Materials.pcbGreen()
+      );
+      group.add(board);
+
+      // RF shielding can
+      const shield = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.06, 0.12),
+        Materials.metalSilver()
+      );
+      shield.position.set(-0.04, 0.04, 0);
+      group.add(shield);
+
+      // Power amplifier chip
+      const pa = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.02, 0.05),
+        Materials.chipBlack()
+      );
+      pa.position.set(0.1, 0.03, 0.04);
+      group.add(pa);
+
+      // SMA antenna connector (metallic cylinder)
+      const smaBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 0.03, 12),
+        Materials.goldPin()
+      );
+      smaBase.position.set(0.16, 0.04, 0);
+      group.add(smaBase);
+
+      const smaPin = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.005, 0.005, 0.04, 6),
+        Materials.goldPin()
+      );
+      smaPin.position.set(0.16, 0.07, 0);
+      group.add(smaPin);
+
+      // Button (channel/power selector)
+      const btn = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.012, 0.015, 8),
+        new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.5, metalness: 0.3 })
+      );
+      btn.position.set(-0.12, 0.04, 0.08);
+      group.add(btn);
+
+      // Status LED
+      const led = new THREE.Mesh(
+        new THREE.SphereGeometry(0.008, 8, 8),
+        Materials.ledGreen()
+      );
+      led.position.set(-0.12, 0.035, -0.06);
+      group.add(led);
+
+      // Wire harness
+      const wire = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.006, 0.006, 0.15, 6),
+        Materials.blackWire()
+      );
+      wire.rotation.z = Math.PI / 2;
+      wire.position.set(-0.24, 0, 0);
+      group.add(wire);
+
+      setShadows(group);
+      return group;
+    },
+    snapPosition: { x: 0, y: 1.18, z: -0.3 },
+    snapRotation: { x: 0, y: 0, z: 0, w: 1 },
+    colliderType: 'cuboid',
+    colliderArgs: [0.18, 0.04, 0.13],
+    mass: 0.12,
+    spawnOffset: { x: -3, y: 2, z: 1.5 },
+  });
+
+  // ===== GPS MODULE =====
+  parts.push({
+    id: 'gps',
+    label: 'GPS Module',
+    createMesh: () => {
+      const group = new THREE.Group();
+
+      // Ceramic patch antenna (white square)
+      const patch = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.03, 0.28),
+        new THREE.MeshStandardMaterial({ color: 0xe8e8e0, roughness: 0.7, metalness: 0.0 })
+      );
+      patch.position.y = 0.04;
+      group.add(patch);
+
+      // PCB underneath
+      const pcb = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.02, 0.32),
+        Materials.pcbGreen()
+      );
+      group.add(pcb);
+
+      // Ground plane (slightly larger, metallic)
+      const groundPlane = new THREE.Mesh(
+        new THREE.BoxGeometry(0.34, 0.004, 0.34),
+        Materials.metalSilver()
+      );
+      groundPlane.position.y = -0.012;
+      group.add(groundPlane);
+
+      // GPS receiver chip
+      const chip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.015, 0.06),
+        Materials.chipBlack()
+      );
+      chip.position.set(0, -0.018, 0);
+      group.add(chip);
+
+      // Crystal oscillator
+      const crystal = new THREE.Mesh(
+        new THREE.BoxGeometry(0.03, 0.012, 0.02),
+        Materials.metalSilver()
+      );
+      crystal.position.set(0.08, -0.018, 0.06);
+      group.add(crystal);
+
+      // Mast/pole
+      const mast = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.015, 0.018, 0.3, 8),
+        Materials.metalDark()
+      );
+      mast.position.y = -0.16;
+      group.add(mast);
+
+      // Connector cable
+      const cable = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.008, 0.008, 0.2, 6),
+        Materials.blackWire()
+      );
+      cable.position.set(0, -0.32, 0);
+      group.add(cable);
+
+      // Connector plug
+      const plug = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.015, 0.025),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 })
+      );
+      plug.position.set(0, -0.42, 0);
+      group.add(plug);
+
+      setShadows(group);
+      return group;
+    },
+    snapPosition: { x: 0, y: 1.5, z: 0 },
+    snapRotation: { x: 0, y: 0, z: 0, w: 1 },
+    colliderType: 'cuboid',
+    colliderArgs: [0.17, 0.22, 0.17],
+    mass: 0.15,
+    spawnOffset: { x: 2, y: 3, z: 2 },
+  });
+
+  // ===== ANTENNA (5.8GHz Pagoda / LHCP) =====
+  parts.push({
+    id: 'antenna',
+    label: 'Antenna (5.8 GHz)',
+    createMesh: () => {
+      const group = new THREE.Group();
+
+      // SMA connector base (gold)
+      const smaBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 0.04, 12),
+        Materials.goldPin()
+      );
+      smaBase.position.y = -0.02;
+      group.add(smaBase);
+
+      // SMA hex nut
+      const nut = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.03, 0.01, 6),
+        Materials.goldPin()
+      );
+      nut.position.y = 0.01;
+      group.add(nut);
+
+      // Antenna stem (coax)
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.008, 0.008, 0.3, 8),
+        Materials.metalSilver()
+      );
+      stem.position.y = 0.17;
+      group.add(stem);
+
+      // Pagoda radiating elements (2 PCB discs)
+      const disc1 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.05, 0.008, 16),
+        Materials.pcbGreen()
+      );
+      disc1.position.y = 0.25;
+      group.add(disc1);
+
+      const disc2 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.05, 0.008, 16),
+        Materials.pcbGreen()
+      );
+      disc2.position.y = 0.3;
+      group.add(disc2);
+
+      // Protective housing (translucent tube)
+      const housing = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.035, 0.32, 12),
+        new THREE.MeshStandardMaterial({
+          color: 0xaaaaaa,
+          roughness: 0.4,
+          metalness: 0.0,
+          transparent: true,
+          opacity: 0.3,
+        })
+      );
+      housing.position.y = 0.17;
+      group.add(housing);
+
+      // Tip cap
+      const tip = new THREE.Mesh(
+        new THREE.SphereGeometry(0.025, 12, 8),
+        new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6 })
+      );
+      tip.position.y = 0.34;
+      group.add(tip);
+
+      setShadows(group);
+      return group;
+    },
+    snapPosition: { x: 0.2, y: 1.3, z: -0.4 },
+    snapRotation: { x: 0, y: 0, z: 0, w: 1 },
+    colliderType: 'cylinder',
+    colliderArgs: [0.06, 0.2],
+    mass: 0.05,
+    spawnOffset: { x: -2, y: 3, z: -2 },
+  });
+
   return parts;
 }
