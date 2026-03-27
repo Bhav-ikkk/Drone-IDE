@@ -22,6 +22,7 @@ export function initDroneParts(scene, world) {
       colliderType: def.colliderType,
       colliderArgs: def.colliderArgs,
       mass: def.mass,
+      id: def.id,
     });
 
     droneParts.push({

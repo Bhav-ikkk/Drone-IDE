@@ -365,7 +365,106 @@
     /* Responsive */
     @media (max-width: 768px) {
       #info-panel { width: 100%; right: -100%; }
+      #inventory-panel { width: 100%; left: -100%; }
     }
+
+    /* ========== INVENTORY PANEL ========== */
+    #inventory-panel {
+      position: fixed;
+      top: 0;
+      left: -360px;
+      width: 340px;
+      height: 100%;
+      background: rgba(10, 15, 28, 0.97);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid rgba(0, 200, 120, 0.2);
+      z-index: 300;
+      transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+      color: #c8d0dc;
+      font-size: 0.85rem;
+      box-shadow: 8px 0 40px rgba(0,0,0,0.5);
+      padding: 0;
+    }
+    #inventory-panel.open { left: 0; }
+    .inv-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid rgba(0,200,120,0.1);
+      background: rgba(10, 15, 28, 0.98);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .inv-header h3 { margin: 0; color: #fff; font-size: 1rem; }
+    .inv-section { padding: 12px 20px; }
+    .inv-label { display: block; color: #667788; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .inv-row { display: flex; gap: 8px; }
+    .inv-input {
+      flex: 1; padding: 8px 10px; font-size: 0.82rem;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px; color: #c8d0dc; outline: none;
+    }
+    .inv-input:focus { border-color: rgba(0,200,120,0.4); }
+    .inv-btn {
+      padding: 8px 14px; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid rgba(0,200,120,0.25); border-radius: 6px;
+      background: rgba(0,200,120,0.08); color: #50d8a0; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .inv-btn:hover { background: rgba(0,200,120,0.15); }
+    .inv-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .inv-btn-primary { background: rgba(0,200,120,0.15); }
+    .inv-file-input {
+      display: block; width: 100%; padding: 8px; margin: 6px 0;
+      font-size: 0.78rem; color: #8899aa;
+      background: rgba(255,255,255,0.03);
+      border: 1px dashed rgba(255,255,255,0.1);
+      border-radius: 6px;
+    }
+    .inv-status {
+      padding: 4px 20px 8px;
+      font-size: 0.78rem; color: #50d8a0;
+      min-height: 24px;
+    }
+    .inv-list { padding: 0 20px 20px; }
+    .inventory-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px; padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    .inv-item-name { font-weight: 600; color: #e8edf5; font-size: 0.85rem; }
+    .inv-item-type { color: #667788; font-size: 0.75rem; margin: 2px 0 8px; }
+    .inv-item-actions { display: flex; gap: 6px; }
+    .inv-add-btn, .inv-export-btn, .inv-remove-btn {
+      padding: 4px 10px; font-size: 0.72rem; border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
+      background: rgba(255,255,255,0.04); color: #8899aa;
+      transition: all 0.2s;
+    }
+    .inv-add-btn:hover { background: rgba(0,200,120,0.15); color: #50d8a0; border-color: rgba(0,200,120,0.3); }
+    .inv-export-btn:hover { background: rgba(0,120,255,0.15); color: #7eb8ff; border-color: rgba(0,120,255,0.3); }
+    .inv-remove-btn:hover { background: rgba(255,60,60,0.15); color: #ff6666; border-color: rgba(255,60,60,0.3); }
+
+    /* ========== COLLABORATION PANEL ========== */
+    #collab-panel {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 100;
+    }
+    .collab-row { display: flex; gap: 6px; }
+    .collab-input {
+      padding: 6px 10px; font-size: 0.78rem; width: 120px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px; color: #c8d0dc; outline: none;
+    }
+    .collab-input:focus { border-color: rgba(0,180,255,0.4); }
+    .collab-btn {
+      padding: 6px 12px; font-size: 0.72rem; font-weight: 600;
+      border: 1px solid rgba(0,180,255,0.25); border-radius: 6px;
+      background: rgba(0,180,255,0.08); color: #5ac8fa; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .collab-btn:hover { background: rgba(0,180,255,0.15); }
   </style>
 </head>
 <body>
@@ -393,7 +492,7 @@
     <div class="hud-line" id="hud-gesture">Gesture: NONE</div>
     <div class="hud-line" id="hud-state">State: IDLE</div>
   </div>
-  <div id="hint-bar">Click any drone part to explore specs, power states &amp; 3D model info &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Drag to orbit</div>
+  <div id="hint-bar">Click any drone part to explore specs, power states &amp; 3D model info &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Drag to orbit &nbsp;|&nbsp; I = Inventory &nbsp;|&nbsp; D = Debug</div>
 
   <!-- Info Panel -->
   <div id="info-panel">
@@ -402,6 +501,35 @@
       <h2 id="info-title"></h2>
     </div>
     <div id="info-body"></div>
+  </div>
+
+  <!-- Inventory Panel -->
+  <div id="inventory-panel">
+    <div class="inv-header">
+      <h3>📦 Part Inventory</h3>
+    </div>
+    <div class="inv-section">
+      <label class="inv-label">Gemini API Key</label>
+      <div class="inv-row">
+        <input type="password" id="gemini-api-key" placeholder="Enter API key…" class="inv-input" />
+        <button id="set-api-key-btn" class="inv-btn">Set</button>
+      </div>
+    </div>
+    <div class="inv-section">
+      <label class="inv-label">Upload Part Photo</label>
+      <input type="file" id="part-image-input" accept="image/*" class="inv-file-input" />
+      <button id="analyze-part-btn" class="inv-btn inv-btn-primary" disabled>Analyze &amp; Add Part</button>
+    </div>
+    <div id="inventory-status" class="inv-status"></div>
+    <div id="inventory-list" class="inv-list"></div>
+  </div>
+
+  <!-- Collaboration Panel -->
+  <div id="collab-panel">
+    <div class="collab-row">
+      <input type="text" id="collab-room-input" placeholder="Room code…" class="collab-input" />
+      <button id="collab-toggle-btn" class="collab-btn">Enable Collaboration</button>
+    </div>
   </div>
 
   <script type="module" src="/src/main.js"></script>
