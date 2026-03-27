@@ -3,7 +3,7 @@ import * as THREE from 'three';
 // Core
 import { initRenderer } from './core/renderer.js';
 import { initScene } from './core/scene.js';
-import { initCamera, updateCamera, orbitCamera } from './core/camera.js';
+import { initCamera, updateCamera, orbitCamera, getControls } from './core/camera.js';
 import { initLighting } from './core/lighting.js';
 
 // Physics
@@ -49,6 +49,10 @@ let motorGain = null;
 
 // Cursor visualization
 let cursorSphere = null;
+const mouseNdc = new THREE.Vector2(0, 0);
+const pointerRaycaster = new THREE.Raycaster();
+let mouseDown = false;
+let dragSource = 'NONE'; // NONE | MOUSE | HAND
 
 // Fixed timestep
 const FIXED_DT = 1 / 60;
@@ -132,12 +136,13 @@ async function init() {
   const loadingEl = document.getElementById('loading-text');
   const cameraOverlay = document.getElementById('camera-overlay');
   const allowBtn = document.getElementById('allow-camera-btn');
+  const skipBtn = document.getElementById('skip-camera-btn');
 
   // Init Three.js
   const canvas = document.getElementById('three-canvas');
   renderer = initRenderer(canvas);
   scene = initScene();
-  camera = initCamera();
+  camera = initCamera(canvas);
   initLighting(scene);
 
   // Init physics
@@ -185,12 +190,23 @@ async function init() {
       // Init MediaPipe
       await initMediaPipe(video);
       mediaPipeReady = true;
+      allowBtn.textContent = 'Camera Enabled';
     } catch (err) {
-      console.error('Camera access denied:', err);
-      allowBtn.textContent = 'Camera Denied — Retry';
+      console.error('Camera unavailable, continuing with mouse controls:', err);
+      mediaPipeReady = false;
+      cameraOverlay.classList.add('hidden');
+      allowBtn.textContent = 'Using Mouse Controls';
       allowBtn.style.background = 'linear-gradient(135deg, #ff4444, #cc0000)';
     }
   });
+
+  skipBtn.addEventListener('click', () => {
+    mediaPipeReady = false;
+    cameraOverlay.classList.add('hidden');
+    initAudio();
+  });
+
+  setupMouseControls(canvas);
 
   // Keyboard shortcuts
   window.addEventListener('keydown', (e) => {
@@ -221,26 +237,38 @@ function gameLoop(timestamp) {
   // ---- INPUT: Hand detection ----
   let gestureData = { gesture: 'NONE' };
   if (mediaPipeReady) {
-    const results = detectHands(now);
-    if (results && results.landmarks && results.landmarks.length > 0) {
-      const rawLandmarks = results.landmarks[0];
-      const worldLandmarks = results.worldLandmarks
-        ? results.worldLandmarks[0]
-        : rawLandmarks;
+    try {
+      const results = detectHands(now);
+      if (results && results.landmarks && results.landmarks.length > 0) {
+        const rawLandmarks = results.landmarks[0];
+        const worldLandmarks = results.worldLandmarks
+          ? results.worldLandmarks[0]
+          : rawLandmarks;
 
-      // Smooth landmarks
-      const smoothed = smoothLandmarks(prevSmoothedLandmarks, worldLandmarks, 0.6);
-      prevSmoothedLandmarks = smoothed;
+        if (areLandmarksValid(rawLandmarks) && areLandmarksValid(worldLandmarks)) {
+          // Smooth landmarks
+          const smoothed = smoothLandmarks(prevSmoothedLandmarks, worldLandmarks, 0.6);
+          prevSmoothedLandmarks = smoothed;
 
-      gestureData = detectGesture(rawLandmarks, smoothed);
+          gestureData = detectGesture(rawLandmarks, smoothed);
 
-      // Update 3D cursor
-      const palmLandmark = rawLandmarks[9]; // Middle finger MCP as palm center
-      const cursorPos = handTo3DPosition(palmLandmark, camera);
-      cursorSphere.position.copy(cursorPos);
-      cursorSphere.visible = true;
-    } else {
-      cursorSphere.visible = false;
+          // Update 3D cursor
+          const palmLandmark = rawLandmarks[9]; // Middle finger MCP as palm center
+          const cursorPos = handTo3DPosition(palmLandmark, camera);
+          if (isFiniteVector3(cursorPos)) {
+            cursorSphere.position.copy(cursorPos);
+            cursorSphere.visible = true;
+          }
+        } else {
+          prevSmoothedLandmarks = null;
+        }
+      } else {
+        if (!mouseDown) cursorSphere.visible = false;
+        prevSmoothedLandmarks = null;
+      }
+    } catch (err) {
+      console.error('Hand detection frame skipped:', err);
+      gestureData = { gesture: 'NONE' };
       prevSmoothedLandmarks = null;
     }
   }
@@ -330,11 +358,12 @@ function handleGestureState(gestureData, dt) {
         appState = 'IDLE';
       }
       // Release drag
-      if (isDragging) releaseDrag();
+      if (isDragging && dragSource === 'HAND') releaseDrag();
       break;
 
     case 'PINCH':
       if (!isAssembled() && !isFlying()) {
+        if (dragSource === 'MOUSE') break;
         // Pinch-drag: grab nearest part
         const cursorWorld = cursorSphere.position;
         if (!isDragging) {
@@ -356,6 +385,7 @@ function handleGestureState(gestureData, dt) {
             // Within 2 units
             draggedPart = nearest;
             isDragging = true;
+            dragSource = 'HAND';
             draggedPart.rigidBody.setBodyType(2, true); // Kinematic
           }
         }
@@ -383,12 +413,118 @@ function handleGestureState(gestureData, dt) {
       break;
 
     case 'NONE':
-      if (isDragging) releaseDrag();
+      if (isDragging && dragSource === 'HAND') releaseDrag();
       if (!isAssembled() && !isFlying() && appState !== 'IDLE') {
         appState = 'IDLE';
       }
       break;
   }
+}
+
+function setupMouseControls(canvas) {
+  canvas.addEventListener('pointermove', (e) => {
+    updateMouseNdc(canvas, e);
+    if (dragSource !== 'HAND') {
+      const cursorPos = getPointerWorldPoint();
+      if (cursorPos) {
+        cursorSphere.position.copy(cursorPos);
+        cursorSphere.visible = true;
+      }
+    }
+
+    if (dragSource === 'MOUSE' && isDragging && draggedPart) {
+      const target = getPointerWorldPoint();
+      if (!target) return;
+      draggedPart.rigidBody.setNextKinematicTranslation(
+        { x: target.x, y: target.y, z: target.z },
+        true
+      );
+      appState = 'DRAGGING';
+    }
+  });
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || isAssembled() || isFlying()) return;
+
+    mouseDown = true;
+    updateMouseNdc(canvas, e);
+
+    const nearest = pickNearestPart();
+    if (!nearest) return;
+
+    draggedPart = nearest;
+    isDragging = true;
+    dragSource = 'MOUSE';
+    draggedPart.rigidBody.setBodyType(2, true);
+
+    const controls = getControls();
+    if (controls) controls.enabled = false;
+    appState = 'DRAGGING';
+  });
+
+  const endMouseDrag = () => {
+    mouseDown = false;
+    if (dragSource === 'MOUSE') {
+      releaseDrag();
+      if (!isAssembled() && !isFlying()) appState = 'IDLE';
+    }
+  };
+
+  canvas.addEventListener('pointerup', endMouseDrag);
+  canvas.addEventListener('pointerleave', endMouseDrag);
+  canvas.addEventListener('pointercancel', endMouseDrag);
+}
+
+function updateMouseNdc(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  mouseNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+function getPointerWorldPoint() {
+  pointerRaycaster.setFromCamera(mouseNdc, camera);
+  const planeNormal = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  const planePoint = camera.position.clone().add(planeNormal.clone().multiplyScalar(-6));
+  const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePoint);
+  const hit = pointerRaycaster.ray.intersectPlane(plane, new THREE.Vector3());
+  return hit && isFiniteVector3(hit) ? hit : null;
+}
+
+function pickNearestPart() {
+  const parts = getDroneParts();
+  if (!parts || parts.length === 0) return null;
+
+  pointerRaycaster.setFromCamera(mouseNdc, camera);
+  const meshes = parts.map((p) => p.mesh);
+  const hits = pointerRaycaster.intersectObjects(meshes, false);
+  if (!hits.length) return null;
+
+  const hitMesh = hits[0].object;
+  return parts.find((p) => p.mesh === hitMesh) || null;
+}
+
+function areLandmarksValid(landmarks) {
+  if (!Array.isArray(landmarks) || landmarks.length < 21) return false;
+  for (const lm of landmarks) {
+    if (
+      !lm ||
+      !Number.isFinite(lm.x) ||
+      !Number.isFinite(lm.y) ||
+      (lm.z != null && !Number.isFinite(lm.z))
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isFiniteVector3(vec) {
+  return (
+    vec &&
+    Number.isFinite(vec.x) &&
+    Number.isFinite(vec.y) &&
+    Number.isFinite(vec.z)
+  );
 }
 
 function releaseDrag() {
@@ -397,6 +533,10 @@ function releaseDrag() {
     draggedPart = null;
   }
   isDragging = false;
+  dragSource = 'NONE';
+
+  const controls = getControls();
+  if (controls) controls.enabled = true;
 }
 
 // ========== START ==========

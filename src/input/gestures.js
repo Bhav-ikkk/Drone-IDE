@@ -18,6 +18,10 @@ function dist(a, b) {
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
+function isValidPoint(p) {
+  return p && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.z == null || Number.isFinite(p.z));
+}
+
 function isFingerCurled(landmarks, tipIdx, pipIdx, mcpIdx) {
   const tip = landmarks[tipIdx];
   const pip = landmarks[pipIdx];
@@ -37,6 +41,11 @@ export function detectGesture(landmarks, worldLandmarks) {
   if (!landmarks || landmarks.length < 21) return { gesture: 'NONE', landmarks, worldLandmarks };
 
   const lm = worldLandmarks || landmarks;
+  if (!Array.isArray(lm) || lm.length < 21) return { gesture: 'NONE', landmarks, worldLandmarks };
+  if (!isValidPoint(lm[THUMB_TIP]) || !isValidPoint(lm[INDEX_TIP]) || !isValidPoint(lm[MIDDLE_TIP])) {
+    motionHistory.length = 0;
+    return { gesture: 'NONE', landmarks, worldLandmarks };
+  }
 
   // Update motion history for swipe detection
   motionHistory.push({

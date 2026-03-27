@@ -14,6 +14,10 @@ const screenCoord = new THREE.Vector2();
  */
 export function handTo3DPosition(landmark, camera) {
   if (!landmark) return virtualCursor.clone();
+  if (!camera) return virtualCursor.clone();
+  if (!Number.isFinite(landmark.x) || !Number.isFinite(landmark.y)) {
+    return virtualCursor.clone();
+  }
 
   // MediaPipe gives x,y in [0,1] normalized image coords (mirrored)
   // Convert to NDC: [-1, 1]
@@ -35,13 +39,20 @@ export function handTo3DPosition(landmark, camera) {
   );
 
   const intersectPoint = new THREE.Vector3();
-  raycaster.ray.intersectPlane(plane, intersectPoint);
-
-  if (!intersectPoint) return virtualCursor.clone();
+  const hit = raycaster.ray.intersectPlane(plane, intersectPoint);
+  if (!hit) return virtualCursor.clone();
 
   // Apply depth from hand z-coordinate (closer hand = deeper into scene)
-  const depthOffset = (landmark.z || 0) * 5;
+  const depthOffset = Number.isFinite(landmark.z) ? landmark.z * 5 : 0;
   intersectPoint.add(planeNormal.clone().multiplyScalar(depthOffset));
+
+  if (
+    !Number.isFinite(intersectPoint.x) ||
+    !Number.isFinite(intersectPoint.y) ||
+    !Number.isFinite(intersectPoint.z)
+  ) {
+    return virtualCursor.clone();
+  }
 
   // Smooth the cursor
   const smoothed = smoothValue3D(smoothedCursor, {

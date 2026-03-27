@@ -5,18 +5,12 @@ let lastResults = null;
 let videoElement = null;
 let running = false;
 
-export async function initMediaPipe(video) {
-  videoElement = video;
-
-  const vision = await FilesetResolver.forVisionTasks(
-    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
-  );
-
-  handLandmarker = await HandLandmarker.createFromOptions(vision, {
+async function createHandLandmarker(vision, delegate) {
+  return HandLandmarker.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath:
         'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-      delegate: 'GPU',
+      delegate,
     },
     runningMode: 'VIDEO',
     numHands: 1,
@@ -24,6 +18,21 @@ export async function initMediaPipe(video) {
     minHandPresenceConfidence: 0.6,
     minTrackingConfidence: 0.6,
   });
+}
+
+export async function initMediaPipe(video) {
+  videoElement = video;
+
+  const vision = await FilesetResolver.forVisionTasks(
+    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+  );
+
+  try {
+    handLandmarker = await createHandLandmarker(vision, 'GPU');
+  } catch (gpuError) {
+    console.warn('MediaPipe GPU delegate failed, falling back to CPU:', gpuError);
+    handLandmarker = await createHandLandmarker(vision, 'CPU');
+  }
 
   running = true;
   return handLandmarker;
@@ -37,6 +46,7 @@ export function detectHands(timestamp) {
     lastResults = handLandmarker.detectForVideo(videoElement, timestamp);
   } catch (e) {
     // Occasionally frame timing can cause issues; skip frame
+    return lastResults;
   }
   return lastResults;
 }
