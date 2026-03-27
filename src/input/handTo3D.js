@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { smoothValue3D } from '../utils/smoothing.js';
+import { smoothValue3D } from '../input/smoothing.js';
 
-const interactionPlaneDistance = 6;
+const interactionPlaneDistance = 2.2; // Spec: 1.8–2.5m interaction plane
 const virtualCursor = new THREE.Vector3(0, 1, 0);
 const smoothedCursor = { x: 0, y: 1, z: 0 };
 

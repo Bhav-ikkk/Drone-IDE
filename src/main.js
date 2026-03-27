@@ -7,13 +7,13 @@ import { initCamera, updateCamera, orbitCamera, getControls } from './core/camer
 import { initLighting } from './core/lighting.js';
 
 // Physics
-import { initPhysicsWorld, stepPhysics } from './physics/world.js';
+import { initPhysicsWorld, stepPhysics, getWorld } from './physics/world.js';
 
 // Input
 import { initMediaPipe, detectHands } from './input/mediapipe.js';
 import { detectGesture } from './input/gestures.js';
 import { handTo3DPosition } from './input/handTo3D.js';
-import { smoothLandmarks } from './utils/smoothing.js';
+import { smoothLandmarks, resetFilters } from './input/smoothing.js';
 
 // Drone
 import {
@@ -25,12 +25,20 @@ import {
 } from './drone/assembly.js';
 import { assembleStep, disassembleStep } from './drone/snapping.js';
 import { startFlight, stopFlight, isFlying, updateFlight, updatePropellers } from './drone/flight.js';
+import { applyMotorTorque } from './drone/torqueSystem.js';
 
 // UI
 import { updateHUD } from './ui/hud.js';
 import { createLabels, updateLabels, setLabelsVisible } from './ui/labels.js';
 import { createOverlays, updateOverlays, toggleOverlays } from './ui/overlays.js';
 import { initInfoPanel, showPartInfo } from './ui/infoPanel.js';
+import { initInventoryUI, toggleInventoryPanel } from './ui/inventoryUI.js';
+
+// Utils
+import { initDebug, toggleDebug } from './utils/debug.js';
+
+// Network
+import { connect as serverConnect, disconnect as serverDisconnect, isConnected, broadcastDroneState } from './network/serverConnector.js';
 
 // ========== STATE ==========
 let renderer, scene, camera;
@@ -150,6 +158,9 @@ async function init() {
   camera = initCamera(canvas);
   initLighting(scene);
 
+  // Init debug visualization
+  initDebug(scene);
+
   // Init physics
   loadingEl.textContent = 'Initializing physics engine…';
   const world = await initPhysicsWorld();
@@ -167,6 +178,36 @@ async function init() {
     const controls = getControls();
     if (controls) controls.enabled = true;
   });
+
+  // Init inventory UI (adds custom parts to scene when user clicks "Add to Scene")
+  initInventoryUI(({ mesh, partData }) => {
+    if (mesh) {
+      mesh.position.set(
+        (Math.random() - 0.5) * 3,
+        2 + Math.random(),
+        (Math.random() - 0.5) * 3
+      );
+      scene.add(mesh);
+    }
+  });
+
+  // Collaboration toggle
+  const collabBtn = document.getElementById('collab-toggle-btn');
+  const collabInput = document.getElementById('collab-room-input');
+  if (collabBtn) {
+    collabBtn.addEventListener('click', () => {
+      if (isConnected()) {
+        serverDisconnect();
+        collabBtn.textContent = 'Enable Collaboration';
+      } else {
+        const room = collabInput ? collabInput.value.trim() : '';
+        serverConnect(room, null, (msg) => {
+          console.log('[Collaboration] Received:', msg);
+        });
+        collabBtn.textContent = 'Disconnect';
+      }
+    });
+  }
 
   // Create virtual cursor (visible sphere)
   const cursorGeo = new THREE.SphereGeometry(0.08, 12, 12);
@@ -206,6 +247,7 @@ async function init() {
       console.error('Camera unavailable, continuing with mouse controls:', err);
       mediaPipeReady = false;
       cameraOverlay.classList.add('hidden');
+      initAudio();
       allowBtn.textContent = 'Using Mouse Controls';
       allowBtn.style.background = 'linear-gradient(135deg, #ff4444, #cc0000)';
     }
@@ -227,6 +269,8 @@ async function init() {
       if (isAssembled() && !isFlying()) startFlight();
       else if (isFlying()) stopFlight();
     }
+    if (e.key === 'i' || e.key === 'I') toggleInventoryPanel();
+    if (e.key === 'd' || e.key === 'D') toggleDebug();
   });
 
   // Start loop
@@ -257,8 +301,8 @@ function gameLoop(timestamp) {
           : rawLandmarks;
 
         if (areLandmarksValid(rawLandmarks) && areLandmarksValid(worldLandmarks)) {
-          // Smooth landmarks
-          const smoothed = smoothLandmarks(prevSmoothedLandmarks, worldLandmarks, 0.6);
+          // Smooth landmarks with 1-Euro filter + EMA (timestamp-based)
+          const smoothed = smoothLandmarks(prevSmoothedLandmarks, worldLandmarks, now / 1000);
           prevSmoothedLandmarks = smoothed;
 
           gestureData = detectGesture(rawLandmarks, smoothed);
@@ -272,15 +316,18 @@ function gameLoop(timestamp) {
           }
         } else {
           prevSmoothedLandmarks = null;
+          resetFilters();
         }
       } else {
         if (!mouseDown) cursorSphere.visible = false;
         prevSmoothedLandmarks = null;
+        resetFilters();
       }
     } catch (err) {
       console.error('Hand detection frame skipped:', err);
       gestureData = { gesture: 'NONE' };
       prevSmoothedLandmarks = null;
+      resetFilters();
     }
   }
 
@@ -289,10 +336,12 @@ function gameLoop(timestamp) {
   // ---- STATE MACHINE ----
   handleGestureState(gestureData, frameTime);
 
-  // ---- PHYSICS (fixed timestep) ----
+  // ---- PHYSICS (fixed timestep, max 4 substeps) ----
   accumulator += frameTime;
   let steps = 0;
-  while (accumulator >= FIXED_DT && steps < 3) {
+  while (accumulator >= FIXED_DT && steps < 4) {
+    // Apply motor torque each physics step when flying
+    applyMotorTorque(isFlying());
     stepPhysics();
     accumulator -= FIXED_DT;
     steps++;
@@ -307,6 +356,11 @@ function gameLoop(timestamp) {
 
   // ---- SYNC ----
   syncMeshesToBodies();
+
+  // ---- NETWORK (optional collaboration broadcast) ----
+  if (isConnected()) {
+    broadcastDroneState(getDroneParts());
+  }
 
   // ---- AUDIO ----
   updateMotorAudio(isFlying());
@@ -350,7 +404,7 @@ function handleGestureState(gestureData, dt) {
     case 'CLOSED_FIST':
       if (!isAssembled() && !isFlying()) {
         appState = 'ASSEMBLING';
-        assembleStep();
+        assembleStep(getWorld());
         if (isAssembled()) {
           appState = 'ASSEMBLED';
           playSnapSound();
@@ -368,7 +422,7 @@ function handleGestureState(gestureData, dt) {
         appState = 'ASSEMBLED';
       } else if (isAssembled()) {
         appState = 'DISASSEMBLING';
-        disassembleStep();
+        disassembleStep(getWorld());
         playWhooshSound();
         appState = 'IDLE';
       }

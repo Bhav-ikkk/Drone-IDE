@@ -1,20 +1,43 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 
 /**
+ * Part-type specific physics properties for realistic simulation.
+ */
+const PART_PHYSICS = {
+  frame:            { mass: 0.30, linDamp: 0.8, angDamp: 2.0, restitution: 0.15, friction: 0.6 },
+  motor1:           { mass: 0.08, linDamp: 0.9, angDamp: 2.2, restitution: 0.10, friction: 0.7 },
+  motor2:           { mass: 0.08, linDamp: 0.9, angDamp: 2.2, restitution: 0.10, friction: 0.7 },
+  motor3:           { mass: 0.08, linDamp: 0.9, angDamp: 2.2, restitution: 0.10, friction: 0.7 },
+  motor4:           { mass: 0.08, linDamp: 0.9, angDamp: 2.2, restitution: 0.10, friction: 0.7 },
+  prop1:            { mass: 0.015, linDamp: 1.2, angDamp: 2.8, restitution: 0.20, friction: 0.4 },
+  prop2:            { mass: 0.015, linDamp: 1.2, angDamp: 2.8, restitution: 0.20, friction: 0.4 },
+  prop3:            { mass: 0.015, linDamp: 1.2, angDamp: 2.8, restitution: 0.20, friction: 0.4 },
+  prop4:            { mass: 0.015, linDamp: 1.2, angDamp: 2.8, restitution: 0.20, friction: 0.4 },
+  battery:          { mass: 0.25, linDamp: 0.6, angDamp: 1.5, restitution: 0.10, friction: 0.8 },
+  flightController: { mass: 0.04, linDamp: 1.0, angDamp: 2.5, restitution: 0.15, friction: 0.5 },
+  camera:           { mass: 0.06, linDamp: 0.8, angDamp: 2.0, restitution: 0.20, friction: 0.5 },
+};
+
+function getPartPhysics(partId) {
+  return PART_PHYSICS[partId] || { mass: 0.1, linDamp: 0.8, angDamp: 1.5, restitution: 0.2, friction: 0.5 };
+}
+
+/**
  * Creates a dynamic rigid body + collider for a drone part.
  * Returns { rigidBody, collider }.
  */
 export function createPartBody(world, partDef) {
-  const { position, colliderType, colliderArgs, mass } = partDef;
+  const { position, colliderType, colliderArgs, mass, id } = partDef;
+  const phys = getPartPhysics(id);
 
-  // RigidBody
+  // RigidBody with realistic damping per part type
   const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
     .setTranslation(position.x, position.y, position.z)
-    .setLinearDamping(0.8)
-    .setAngularDamping(1.2);
+    .setLinearDamping(phys.linDamp)
+    .setAngularDamping(phys.angDamp);
   const rigidBody = world.createRigidBody(bodyDesc);
 
-  // Collider
+  // Collider with per-part mass, restitution, friction
   let colliderDesc;
   if (colliderType === 'cuboid') {
     colliderDesc = RAPIER.ColliderDesc.cuboid(...colliderArgs);
@@ -23,9 +46,9 @@ export function createPartBody(world, partDef) {
   } else {
     colliderDesc = RAPIER.ColliderDesc.cuboid(...colliderArgs);
   }
-  colliderDesc.setMass(mass || 1.0);
-  colliderDesc.setRestitution(0.2);
-  colliderDesc.setFriction(0.5);
+  colliderDesc.setMass(phys.mass);
+  colliderDesc.setRestitution(phys.restitution);
+  colliderDesc.setFriction(phys.friction);
   const collider = world.createCollider(colliderDesc, rigidBody);
 
   return { rigidBody, collider };
@@ -33,8 +56,10 @@ export function createPartBody(world, partDef) {
 
 /**
  * Apply a spring force pulling body toward a target position.
+ * F = -k * (currentPos - targetPos) - b * velocity
+ * k=1200–1800, b=45–70 per spec.
  */
-export function applySpringForce(rigidBody, targetPos, stiffness = 800, damping = 40) {
+export function applySpringForce(rigidBody, targetPos, stiffness = 1500, damping = 55) {
   const pos = rigidBody.translation();
   const vel = rigidBody.linvel();
 
@@ -48,12 +73,11 @@ export function applySpringForce(rigidBody, targetPos, stiffness = 800, damping 
 /**
  * Apply spring torque to rotate body toward target quaternion.
  */
-export function applySpringTorque(rigidBody, targetQuat, stiffness = 200, damping = 30) {
+export function applySpringTorque(rigidBody, targetQuat, stiffness = 300, damping = 45) {
   const currentRot = rigidBody.rotation();
   const angvel = rigidBody.angvel();
 
   // Compute quaternion error: qError = targetQuat * inverse(currentQuat)
-  // For small errors, the vector part of qError ≈ half the rotation error axis*angle
   const cw = currentRot.w, cx = currentRot.x, cy = currentRot.y, cz = currentRot.z;
   const tw = targetQuat.w, tx = targetQuat.x, ty = targetQuat.y, tz = targetQuat.z;
 
@@ -78,8 +102,9 @@ export function applySpringTorque(rigidBody, targetQuat, stiffness = 200, dampin
 
 /**
  * Apply an outward explosion impulse from center.
+ * Magnitude 12–18 per spec, plus small random torque.
  */
-export function applyExplosionImpulse(rigidBody, center, magnitude = 10) {
+export function applyExplosionImpulse(rigidBody, center, magnitude = 15) {
   const pos = rigidBody.translation();
   let dx = pos.x - center.x;
   let dy = pos.y - center.y;
@@ -90,18 +115,26 @@ export function applyExplosionImpulse(rigidBody, center, magnitude = 10) {
   // Add slight upward bias
   dy += 0.3;
 
-  const force = magnitude + Math.random() * 4;
+  const force = magnitude + Math.random() * 3;
   rigidBody.applyImpulse({ x: dx * force, y: dy * force, z: dz * force }, true);
 
-  // Lower damping for natural scatter
-  rigidBody.setLinearDamping(0.4);
-  rigidBody.setAngularDamping(0.6);
+  // Small random torque for spin
+  rigidBody.applyTorqueImpulse({
+    x: (Math.random() - 0.5) * 2,
+    y: (Math.random() - 0.5) * 2,
+    z: (Math.random() - 0.5) * 2,
+  }, true);
+
+  // Air friction damping for natural scatter
+  rigidBody.setLinearDamping(0.6);
+  rigidBody.setAngularDamping(1.5);
 }
 
 /**
  * Reset a body's damping back to assembly defaults.
  */
-export function resetDamping(rigidBody) {
-  rigidBody.setLinearDamping(0.8);
-  rigidBody.setAngularDamping(1.2);
+export function resetDamping(rigidBody, partId) {
+  const phys = getPartPhysics(partId);
+  rigidBody.setLinearDamping(phys.linDamp);
+  rigidBody.setAngularDamping(phys.angDamp);
 }
