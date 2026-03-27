@@ -226,8 +226,12 @@ async function init() {
   // Camera permission flow
   allowBtn.addEventListener('click', async () => {
     try {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const videoConstraints = isMobile
+        ? { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 } }
+        : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } };
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: 'user' },
+        video: videoConstraints,
       });
       const video = document.getElementById('webcam-video');
       video.srcObject = stream;
