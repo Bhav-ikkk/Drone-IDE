@@ -4,531 +4,72 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drone Assembly IDE — Learn to Build Drones</title>
-  <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; font-family: 'Segoe UI', system-ui, sans-serif; }
-    #app { width: 100%; height: 100%; position: relative; }
-    canvas#three-canvas { display: block; width: 100%; height: 100%; }
-
-    /* Camera permission overlay */
-    #camera-overlay {
-      position: fixed; inset: 0; z-index: 1000;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(8,12,22,0.92);
-      backdrop-filter: blur(12px);
-      color: #fff;
-      transition: opacity 0.5s;
-    }
-    #camera-overlay.hidden { opacity: 0; pointer-events: none; }
-    #camera-overlay h1 { font-size: 2.2rem; margin-bottom: 0.5rem; letter-spacing: 2px; font-weight: 700; }
-    #camera-overlay .subtitle { font-size: 1rem; color: #7eb8ff; margin-bottom: 1.5rem; font-weight: 500; }
-    #camera-overlay p { font-size: 0.92rem; color: #8899aa; max-width: 420px; text-align: center; margin-bottom: 1.2rem; line-height: 1.5; }
-    #allow-camera-btn {
-      padding: 14px 48px; font-size: 1.05rem; font-weight: 600;
-      border: none; border-radius: 8px; cursor: pointer;
-      background: linear-gradient(135deg, #00c6ff, #0072ff);
-      color: #fff; letter-spacing: 1px;
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-    #allow-camera-btn:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(0,114,255,0.5); }
-    #skip-camera-btn {
-      margin-top: 16px; padding: 10px 32px; font-size: 0.9rem;
-      border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-      cursor: pointer; background: transparent; color: #8899aa;
-      transition: all 0.2s;
-    }
-    #skip-camera-btn:hover { color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.05); }
-    #privacy-note { font-size: 0.72rem; color: #445566; margin-top: 1.2rem; max-width: 360px; text-align: center; }
-
-    /* Webcam preview */
-    #webcam-container {
-      position: fixed; bottom: 16px; left: 16px; z-index: 100;
-      width: 200px; height: 150px; border-radius: 10px; overflow: hidden;
-      border: 2px solid rgba(0,200,255,0.3);
-      box-shadow: 0 0 20px rgba(0,200,255,0.1);
-    }
-    #webcam-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-
-    /* HUD */
-    #hud {
-      position: fixed; top: 16px; left: 16px; z-index: 100;
-      color: rgba(0,220,255,0.8); font-family: 'Consolas', monospace; font-size: 13px;
-      text-shadow: 0 0 6px rgba(0,255,255,0.25);
-      pointer-events: none;
-    }
-    #hud .hud-line { margin-bottom: 3px; }
-
-    /* Loading */
-    #loading-text {
-      position: fixed; inset: 0; z-index: 999;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: #0a0e17; color: #0ff; font-size: 1.1rem;
-      font-family: 'Consolas', monospace;
-    }
-    #loading-text .loading-spinner {
-      width: 36px; height: 36px; border: 3px solid rgba(0,255,255,0.15);
-      border-top: 3px solid #0ff; border-radius: 50%;
-      animation: spin 1s linear infinite; margin-bottom: 16px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #loading-text.hidden { display: none; }
-
-    /* Hint bar at bottom */
-    #hint-bar {
-      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-      z-index: 100; color: rgba(255,255,255,0.5); font-size: 0.8rem;
-      font-family: 'Consolas', monospace; text-align: center;
-      pointer-events: none; transition: opacity 0.5s;
-    }
-
-    /* ========== INFO PANEL ========== */
-    #info-panel {
-      position: fixed;
-      top: 0;
-      right: -460px;
-      width: 440px;
-      height: 100%;
-      background: rgba(10, 15, 28, 0.97);
-      backdrop-filter: blur(16px);
-      border-left: 1px solid rgba(0, 180, 255, 0.2);
-      z-index: 300;
-      transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-      overflow-y: auto;
-      overflow-x: hidden;
-      color: #c8d0dc;
-      font-size: 0.88rem;
-      line-height: 1.6;
-      box-shadow: -8px 0 40px rgba(0,0,0,0.5);
-    }
-    #info-panel.open { right: 0; }
-    #info-panel::-webkit-scrollbar { width: 6px; }
-    #info-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
-    #info-panel::-webkit-scrollbar-thumb { background: rgba(0,180,255,0.2); border-radius: 3px; }
-
-    .info-header {
-      position: sticky; top: 0; z-index: 10;
-      background: rgba(10, 15, 28, 0.98);
-      padding: 20px 24px 16px;
-      border-bottom: 1px solid rgba(0,180,255,0.1);
-    }
-    #info-close-btn {
-      position: absolute; top: 14px; right: 16px;
-      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-      color: #8899bb; font-size: 1.3rem; cursor: pointer;
-      width: 32px; height: 32px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.2s;
-    }
-    #info-close-btn:hover { background: rgba(255,60,60,0.15); color: #ff6666; border-color: rgba(255,60,60,0.3); }
-    #info-title {
-      font-size: 1.2rem; font-weight: 700; color: #fff;
-      margin: 0; padding-right: 40px;
-    }
-    #info-title .info-icon { font-size: 1.3rem; margin-right: 6px; }
-
-    #info-body { padding: 0 24px 32px; }
-
-    .info-badge {
-      display: inline-block;
-      padding: 4px 14px; margin: 12px 0 4px;
-      background: rgba(0,180,255,0.1);
-      border: 1px solid rgba(0,180,255,0.25);
-      border-radius: 20px;
-      font-size: 0.75rem; font-weight: 600;
-      color: #5ac8fa; letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-
-    .info-section {
-      margin-top: 20px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(255,255,255,0.05);
-    }
-    .info-section:first-of-type { border-top: none; margin-top: 12px; }
-    .info-section h3 {
-      font-size: 0.92rem; font-weight: 700; color: #e8edf5;
-      margin-bottom: 10px; letter-spacing: 0.3px;
-    }
-    .info-section p {
-      margin: 0; color: #99a8b8; line-height: 1.65;
-    }
-
-    /* Specs table */
-    .info-specs {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .info-specs tr { border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .info-specs td { padding: 7px 0; vertical-align: top; }
-    .spec-label {
-      color: #667788; font-size: 0.82rem; font-weight: 600;
-      width: 140px; padding-right: 12px;
-    }
-    .spec-value {
-      color: #b0c4de; font-family: 'Consolas', monospace; font-size: 0.82rem;
-    }
-
-    /* Alternatives */
-    .info-alternatives { display: flex; flex-direction: column; gap: 8px; }
-    .alt-item {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 8px; padding: 10px 14px;
-    }
-    .alt-item strong {
-      display: block; color: #7eb8ff; font-size: 0.85rem; margin-bottom: 3px;
-    }
-    .alt-item span { color: #778899; font-size: 0.8rem; }
-
-    /* Lists */
-    .info-list {
-      list-style: none; padding: 0; margin: 0;
-    }
-    .info-list li {
-      padding: 6px 0 6px 20px; position: relative;
-      color: #99a8b8; font-size: 0.84rem;
-    }
-    .info-list li::before {
-      content: '•'; position: absolute; left: 4px;
-      color: #556677; font-weight: bold;
-    }
-    .warning-list li::before { content: '⚡'; left: 0; color: #ffaa33; }
-    .positive-list li::before { content: '✓'; left: 2px; color: #44cc88; }
-
-    /* Assembly section */
-    .assembly-section {
-      background: rgba(0,180,255,0.04);
-      border: 1px solid rgba(0,180,255,0.1);
-      border-radius: 10px;
-      padding: 16px !important;
-      margin-top: 20px;
-    }
-
-    /* ========== POWER STATES ========== */
-    .power-states-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .power-state-card {
-      border-radius: 10px;
-      padding: 14px 16px;
-      border-width: 1px;
-      border-style: solid;
-    }
-    .state-min {
-      background: rgba(30, 80, 180, 0.10);
-      border-color: rgba(60, 120, 255, 0.25);
-    }
-    .state-mid {
-      background: rgba(180, 130, 0, 0.10);
-      border-color: rgba(255, 190, 0, 0.28);
-    }
-    .state-max {
-      background: rgba(200, 40, 40, 0.10);
-      border-color: rgba(255, 80, 60, 0.28);
-    }
-    .power-state-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .power-state-icon { font-size: 1rem; flex-shrink: 0; }
-    .power-level-badge {
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 1.5px;
-      padding: 2px 8px;
-      border-radius: 4px;
-      flex-shrink: 0;
-    }
-    .level-min { background: rgba(60,120,255,0.2); color: #7eb8ff; border: 1px solid rgba(60,120,255,0.35); }
-    .level-mid { background: rgba(255,190,0,0.2); color: #ffd060; border: 1px solid rgba(255,190,0,0.40); }
-    .level-max { background: rgba(255,80,60,0.2); color: #ff8870; border: 1px solid rgba(255,80,60,0.40); }
-    .power-state-label {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #d0d8e8;
-      line-height: 1.3;
-    }
-    .power-state-desc {
-      font-size: 0.82rem;
-      color: #8898b0;
-      line-height: 1.6;
-      margin: 0 0 10px 0;
-    }
-    .power-metrics-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 4px;
-    }
-    .power-metrics-table tr { border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .power-metrics-table tr:last-child { border-bottom: none; }
-    .pm-label {
-      font-size: 0.76rem;
-      color: #556677;
-      font-weight: 600;
-      padding: 4px 10px 4px 0;
-      width: 52%;
-      vertical-align: top;
-    }
-    .pm-value {
-      font-size: 0.76rem;
-      color: #a0b8cc;
-      font-family: 'Consolas', monospace;
-      padding: 4px 0;
-      vertical-align: top;
-    }
-
-    /* ========== GLB MODEL CARD ========== */
-    .glb-model-card {
-      background: rgba(0, 255, 180, 0.03);
-      border: 1px solid rgba(0, 255, 180, 0.18);
-      border-radius: 10px;
-      padding: 14px 16px;
-    }
-    .glb-model-header {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .glb-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
-    .glb-file-info { flex: 1; min-width: 0; }
-    .glb-filename {
-      font-family: 'Consolas', monospace;
-      font-size: 0.85rem;
-      color: #70e8c0;
-      font-weight: 700;
-      word-break: break-all;
-    }
-    .glb-polycount {
-      font-size: 0.74rem;
-      color: #556677;
-      margin-top: 2px;
-    }
-    .glb-badge {
-      font-size: 0.62rem;
-      font-weight: 800;
-      letter-spacing: 1px;
-      padding: 3px 8px;
-      border-radius: 4px;
-      background: rgba(0,255,180,0.12);
-      color: #50d8a0;
-      border: 1px solid rgba(0,255,180,0.25);
-      flex-shrink: 0;
-      white-space: nowrap;
-    }
-    .glb-description {
-      font-size: 0.81rem;
-      color: #8898b0;
-      line-height: 1.65;
-      margin: 0 0 12px;
-    }
-    .glb-subsection { margin-top: 10px; }
-    .glb-subsection-title {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: #aabbc8;
-      margin-bottom: 5px;
-      letter-spacing: 0.2px;
-    }
-    .glb-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .glb-list li {
-      font-size: 0.78rem;
-      color: #8898b0;
-      padding: 3px 0 3px 18px;
-      position: relative;
-      line-height: 1.5;
-    }
-    .glb-list li::before {
-      content: '›';
-      position: absolute;
-      left: 4px;
-      color: #40c0a0;
-      font-weight: bold;
-    }
-    .glb-note {
-      font-size: 0.78rem;
-      color: #7a90a0;
-      line-height: 1.6;
-      margin: 0;
-      font-style: italic;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      #info-panel { width: 100%; right: -100%; }
-      #inventory-panel { width: 100%; left: -100%; }
-    }
-
-    /* ========== INVENTORY PANEL ========== */
-    #inventory-panel {
-      position: fixed;
-      top: 0;
-      left: -360px;
-      width: 340px;
-      height: 100%;
-      background: rgba(10, 15, 28, 0.97);
-      backdrop-filter: blur(16px);
-      border-right: 1px solid rgba(0, 200, 120, 0.2);
-      z-index: 300;
-      transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-      overflow-y: auto;
-      color: #c8d0dc;
-      font-size: 0.85rem;
-      box-shadow: 8px 0 40px rgba(0,0,0,0.5);
-      padding: 0;
-    }
-    #inventory-panel.open { left: 0; }
-    .inv-header {
-      padding: 16px 20px 12px;
-      border-bottom: 1px solid rgba(0,200,120,0.1);
-      background: rgba(10, 15, 28, 0.98);
-      position: sticky; top: 0; z-index: 10;
-    }
-    .inv-header h3 { margin: 0; color: #fff; font-size: 1rem; }
-    .inv-section { padding: 12px 20px; }
-    .inv-label { display: block; color: #667788; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .inv-row { display: flex; gap: 8px; }
-    .inv-input {
-      flex: 1; padding: 8px 10px; font-size: 0.82rem;
-      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px; color: #c8d0dc; outline: none;
-    }
-    .inv-input:focus { border-color: rgba(0,200,120,0.4); }
-    .inv-btn {
-      padding: 8px 14px; font-size: 0.78rem; font-weight: 600;
-      border: 1px solid rgba(0,200,120,0.25); border-radius: 6px;
-      background: rgba(0,200,120,0.08); color: #50d8a0; cursor: pointer;
-      transition: all 0.2s;
-    }
-    .inv-btn:hover { background: rgba(0,200,120,0.15); }
-    .inv-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .inv-btn-primary { background: rgba(0,200,120,0.15); }
-    .inv-file-input {
-      display: block; width: 100%; padding: 8px; margin: 6px 0;
-      font-size: 0.78rem; color: #8899aa;
-      background: rgba(255,255,255,0.03);
-      border: 1px dashed rgba(255,255,255,0.1);
-      border-radius: 6px;
-    }
-    .inv-status {
-      padding: 4px 20px 8px;
-      font-size: 0.78rem; color: #50d8a0;
-      min-height: 24px;
-    }
-    .inv-list { padding: 0 20px 20px; }
-    .inventory-item {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 8px; padding: 10px 12px;
-      margin-bottom: 8px;
-    }
-    .inv-item-name { font-weight: 600; color: #e8edf5; font-size: 0.85rem; }
-    .inv-item-type { color: #667788; font-size: 0.75rem; margin: 2px 0 8px; }
-    .inv-item-actions { display: flex; gap: 6px; }
-    .inv-add-btn, .inv-export-btn, .inv-remove-btn {
-      padding: 4px 10px; font-size: 0.72rem; border-radius: 4px;
-      border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
-      background: rgba(255,255,255,0.04); color: #8899aa;
-      transition: all 0.2s;
-    }
-    .inv-add-btn:hover { background: rgba(0,200,120,0.15); color: #50d8a0; border-color: rgba(0,200,120,0.3); }
-    .inv-export-btn:hover { background: rgba(0,120,255,0.15); color: #7eb8ff; border-color: rgba(0,120,255,0.3); }
-    .inv-remove-btn:hover { background: rgba(255,60,60,0.15); color: #ff6666; border-color: rgba(255,60,60,0.3); }
-
-    /* ========== COLLABORATION PANEL ========== */
-    #collab-panel {
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      z-index: 100;
-    }
-    .collab-row { display: flex; gap: 6px; }
-    .collab-input {
-      padding: 6px 10px; font-size: 0.78rem; width: 120px;
-      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px; color: #c8d0dc; outline: none;
-    }
-    .collab-input:focus { border-color: rgba(0,180,255,0.4); }
-    .collab-btn {
-      padding: 6px 12px; font-size: 0.72rem; font-weight: 600;
-      border: 1px solid rgba(0,180,255,0.25); border-radius: 6px;
-      background: rgba(0,180,255,0.08); color: #5ac8fa; cursor: pointer;
-      transition: all 0.2s; white-space: nowrap;
-    }
-    .collab-btn:hover { background: rgba(0,180,255,0.15); }
-  </style>
+  <link rel="stylesheet" href="/src/styles.css" />
 </head>
 <body>
-  <div id="loading-text">
-    <div class="loading-spinner"></div>
-    Initializing systems…
+  <div id="loading-text" role="status" aria-live="polite" aria-label="Application loading">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    Initializing holographic workbench…
   </div>
-  <div id="camera-overlay">
+  <div id="error-banner" role="alert" aria-live="assertive"></div>
+  <div id="camera-overlay" role="dialog" aria-label="Camera permission" aria-modal="true">
     <h1>🛸 DRONE ASSEMBLY IDE</h1>
     <div class="subtitle">Interactive Drone Building &amp; Learning Platform</div>
     <p>Explore drone components in 3D. Click any part to learn everything about it — specifications, use cases, alternatives, and real-world assembly tips.</p>
     <p style="font-size:0.85rem;">Optionally enable your webcam for hand-gesture control.</p>
-    <button id="allow-camera-btn">ENABLE CAMERA &amp; START</button>
-    <button id="skip-camera-btn">Continue with Mouse Only →</button>
+    <button id="allow-camera-btn" aria-label="Enable camera for gesture control">ENABLE CAMERA &amp; START</button>
+    <button id="skip-camera-btn" aria-label="Skip camera and use mouse controls">Continue with Mouse Only →</button>
     <div id="privacy-note">🔒 100% client-side. Camera is optional. All processing happens locally in your browser.</div>
   </div>
-  <div id="app">
-    <canvas id="three-canvas"></canvas>
+  <div id="app" role="main">
+    <canvas id="three-canvas" aria-label="3D drone assembly viewport"></canvas>
   </div>
-  <div id="webcam-container" style="display:none;">
-    <video id="webcam-video" autoplay playsinline></video>
+  <div id="webcam-container" style="display:none;" aria-label="Webcam preview">
+    <video id="webcam-video" autoplay playsinline aria-hidden="true"></video>
   </div>
-  <div id="hud">
+  <div id="hud" aria-label="Heads-up display" role="status" aria-live="off">
     <div class="hud-line" id="hud-fps">FPS: --</div>
     <div class="hud-line" id="hud-gesture">Gesture: NONE</div>
     <div class="hud-line" id="hud-state">State: IDLE</div>
+    <div class="hud-line" id="hud-mode">Mode: MOUSE</div>
   </div>
-  <div id="hint-bar">Click any drone part to explore specs, power states &amp; 3D model info &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Drag to orbit &nbsp;|&nbsp; I = Inventory &nbsp;|&nbsp; D = Debug</div>
+  <div id="hint-bar">Click any part to explore specs &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Drag to orbit &nbsp;|&nbsp; <kbd>I</kbd> Inventory &nbsp;|&nbsp; <kbd>O</kbd> Overlays &nbsp;|&nbsp; <kbd>F</kbd> Flight &nbsp;|&nbsp; <kbd>D</kbd> Debug</div>
 
   <!-- Info Panel -->
-  <div id="info-panel">
+  <div id="info-panel" role="complementary" aria-label="Part information panel">
     <div class="info-header">
-      <button id="info-close-btn">&times;</button>
+      <button id="info-close-btn" aria-label="Close info panel">&times;</button>
       <h2 id="info-title"></h2>
     </div>
     <div id="info-body"></div>
   </div>
 
   <!-- Inventory Panel -->
-  <div id="inventory-panel">
+  <div id="inventory-panel" role="complementary" aria-label="Part inventory panel">
     <div class="inv-header">
       <h3>📦 Part Inventory</h3>
     </div>
     <div class="inv-section">
-      <label class="inv-label">Gemini API Key</label>
+      <label class="inv-label" for="gemini-api-key">Gemini API Key</label>
       <div class="inv-row">
-        <input type="password" id="gemini-api-key" placeholder="Enter API key…" class="inv-input" />
-        <button id="set-api-key-btn" class="inv-btn">Set</button>
+        <input type="password" id="gemini-api-key" placeholder="Enter API key…" class="inv-input" aria-label="Gemini API key" />
+        <button id="set-api-key-btn" class="inv-btn" aria-label="Set API key">Set</button>
       </div>
     </div>
     <div class="inv-section">
-      <label class="inv-label">Upload Part Photo</label>
-      <input type="file" id="part-image-input" accept="image/*" class="inv-file-input" />
-      <button id="analyze-part-btn" class="inv-btn inv-btn-primary" disabled>Analyze &amp; Add Part</button>
+      <label class="inv-label" for="part-image-input">Upload Part Photo</label>
+      <input type="file" id="part-image-input" accept="image/*" class="inv-file-input" aria-label="Upload drone part image" />
+      <button id="analyze-part-btn" class="inv-btn inv-btn-primary" disabled aria-label="Analyze and add part">Analyze &amp; Add Part</button>
     </div>
-    <div id="inventory-status" class="inv-status"></div>
-    <div id="inventory-list" class="inv-list"></div>
+    <div id="inventory-status" class="inv-status" role="status" aria-live="polite"></div>
+    <div id="inventory-list" class="inv-list" role="list" aria-label="Inventory items"></div>
   </div>
 
   <!-- Collaboration Panel -->
-  <div id="collab-panel">
+  <div id="collab-panel" role="complementary" aria-label="Collaboration controls">
     <div class="collab-row">
-      <input type="text" id="collab-room-input" placeholder="Room code…" class="collab-input" />
-      <button id="collab-toggle-btn" class="collab-btn">Enable Collaboration</button>
+      <input type="text" id="collab-room-input" placeholder="Room code…" class="collab-input" aria-label="Collaboration room code" />
+      <button id="collab-toggle-btn" class="collab-btn" aria-label="Toggle collaboration">Enable Collaboration</button>
     </div>
   </div>
 

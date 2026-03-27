@@ -11,7 +11,7 @@ export function initInfoPanel(onClose) {
   closeBtn = document.getElementById('info-close-btn');
   onCloseCallback = onClose || null;
 
-  closeBtn.addEventListener('click', hideInfoPanel);
+  if (closeBtn) closeBtn.addEventListener('click', hideInfoPanel);
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') hideInfoPanel();
@@ -175,7 +175,7 @@ function renderPowerState(level, state, cssClass) {
 }
 
 export function hideInfoPanel() {
-  panelEl.classList.remove('open');
+  if (panelEl) panelEl.classList.remove('open');
   selectedPartId = null;
   if (onCloseCallback) onCloseCallback();
 }

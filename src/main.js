@@ -162,7 +162,7 @@ async function init() {
   initDebug(scene);
 
   // Init physics
-  loadingEl.textContent = 'Initializing physics engine…';
+  loadingEl.textContent = 'Loading physics engine…';
   const world = await initPhysicsWorld();
 
   // Init drone parts
@@ -369,7 +369,7 @@ function gameLoop(timestamp) {
   updateLabels(getDroneParts());
   updateOverlays(getDroneParts(), scene);
   updateCamera(frameTime, getDroneCenter());
-  updateHUD(frameTime, currentGesture, appState);
+  updateHUD(frameTime, currentGesture, appState, mediaPipeReady ? 'GESTURE' : 'MOUSE');
 
   // ---- RENDER ----
   try {
@@ -648,5 +648,10 @@ init().catch((err) => {
   if (loadingEl) {
     loadingEl.textContent = `Error: ${err.message}`;
     loadingEl.classList.remove('hidden');
+  }
+  const errorBanner = document.getElementById('error-banner');
+  if (errorBanner) {
+    errorBanner.textContent = `Initialization failed: ${err.message}. Please refresh the page.`;
+    errorBanner.classList.add('visible');
   }
 });

@@ -6,8 +6,9 @@ let displayFps = 0;
 const fpsEl = document.getElementById('hud-fps');
 const gestureEl = document.getElementById('hud-gesture');
 const stateEl = document.getElementById('hud-state');
+const modeEl = document.getElementById('hud-mode');
 
-export function updateHUD(dt, gestureName, stateName) {
+export function updateHUD(dt, gestureName, stateName, inputMode) {
   // FPS calculation
   fpsAccum += dt;
   fpsCounter++;
@@ -20,4 +21,5 @@ export function updateHUD(dt, gestureName, stateName) {
   if (fpsEl) fpsEl.textContent = `FPS: ${displayFps}`;
   if (gestureEl) gestureEl.textContent = `Gesture: ${gestureName || 'NONE'}`;
   if (stateEl) stateEl.textContent = `State: ${stateName || 'IDLE'}`;
+  if (modeEl) modeEl.textContent = `Mode: ${inputMode || 'MOUSE'}`;
 }
