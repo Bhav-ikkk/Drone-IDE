@@ -63,13 +63,27 @@ export function setAssembled(val) {
 
 /**
  * Sync Three.js meshes from Rapier body positions every frame.
+ * Guards against NaN values that would corrupt WebGL render state.
  */
 export function syncMeshesToBodies() {
   for (const part of droneParts) {
     const pos = part.rigidBody.translation();
     const rot = part.rigidBody.rotation();
-    part.mesh.position.set(pos.x, pos.y, pos.z);
-    part.mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w);
+    if (
+      Number.isFinite(pos.x) &&
+      Number.isFinite(pos.y) &&
+      Number.isFinite(pos.z)
+    ) {
+      part.mesh.position.set(pos.x, pos.y, pos.z);
+    }
+    if (
+      Number.isFinite(rot.x) &&
+      Number.isFinite(rot.y) &&
+      Number.isFinite(rot.z) &&
+      Number.isFinite(rot.w)
+    ) {
+      part.mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w);
+    }
   }
 }
 

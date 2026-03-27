@@ -60,6 +60,63 @@ export const partDescriptions = {
     ],
 
     assemblyTips: `The frame is assembled first — it's the foundation everything mounts to.\n\n1. Start with the bottom plate and press-fit the 4 arms\n2. Install M3 standoffs for the electronics stack\n3. Mount the top plate last, sandwiching the arms\n4. Use medium-strength threadlocker (Loctite Blue 242) on all frame screws\n5. Check arm alignment by spinning each arm mount hole — no play should exist\n6. Route the battery strap through the bottom plate slots before final assembly`,
+
+    powerStates: {
+      min: {
+        label: 'Static / Ground Idle',
+        description: 'The frame sits motionless. Motors are disarmed or at minimum power. Only static gravity loads act on the structure — standoffs, arm joints, and mounting holes experience near-zero dynamic stress. The carbon fiber is in its most relaxed state.',
+        metrics: [
+          { label: 'Structural Load', value: 'Static (gravity only, ~0.8 kg system weight)' },
+          { label: 'Vibration Level', value: 'None' },
+          { label: 'Arm Flex', value: '< 0.1 mm' },
+          { label: 'Frame Temperature', value: 'Ambient (no heat input)' },
+          { label: 'Motor Torque on Arms', value: '~0 Nm' },
+        ],
+      },
+      mid: {
+        label: 'Normal Flight / Hover (~50% throttle)',
+        description: 'The drone hovers or cruises steadily. Motors at ~21,000 RPM transmit moderate vibration through the arms. The carbon fiber flexes slightly at arm tips but well within its elastic limit. This is the designed operational envelope.',
+        metrics: [
+          { label: 'Total System Thrust', value: '~1.2–1.6 kg (balancing weight + climb margin)' },
+          { label: 'Arm Tip Deflection', value: '~0.3–0.8 mm at cruise thrust' },
+          { label: 'Vibration Frequency', value: '~350 Hz conducted from motors' },
+          { label: 'Frame Temperature', value: '35–50°C (conducted from motor mounts)' },
+          { label: 'Motor Torque on Arms', value: '~1.0–1.5 Nm per arm' },
+        ],
+      },
+      max: {
+        label: 'Full Throttle / Maximum Stress (100%)',
+        description: 'All 4 motors at peak RPM (~42,000). Each arm bears up to 1.5 kg outward pull. The center plates experience maximum torsion from rotor torque imbalance. Impact crashes at this power level produce the highest frame failure risk. G-forces during aggressive maneuvers can reach 10–15G.',
+        metrics: [
+          { label: 'Total Thrust Generated', value: '~6 kg (4 × 1,500 g)' },
+          { label: 'Arm Bending Moment', value: 'Near design limit (~3–4 Nm per arm)' },
+          { label: 'Vibration Frequency', value: '~700 Hz at max RPM' },
+          { label: 'Peak G-Force (maneuvers)', value: 'Up to 10–15G' },
+          { label: 'Frame Temperature', value: '60–80°C near motor mounts' },
+          { label: 'Motor Torque on Arms', value: '~2.5–3.5 Nm per arm' },
+        ],
+      },
+    },
+
+    glbModel: {
+      suggestedFilename: 'drone_frame.glb',
+      description: 'A high-detail quadcopter X-frame featuring an octagonal center stack (top + bottom carbon fiber plates with visible 3K weave pattern), four tapered arms extending to motor mount platforms, four rubber-tipped landing legs, M3 standoffs between the plates, and a battery strap groove on the underside. The model should clearly show the arm cross-section (rectangular tube), individual bolt holes, and the mounting pattern.',
+      polyCount: '8,000–20,000 triangles recommended',
+      materials: [
+        'Carbon fiber — dark near-black (hex #1a1a1e), roughness 0.35, metalness 0.10, with 3K weave normal map',
+        'Metal standoffs — silver (hex #b0b5c0), roughness 0.25, metalness 0.85',
+        'Rubber landing legs — near-black (hex #222222), roughness 0.90, metalness 0.00',
+        'Motor mount face — slight sheen (roughness 0.30)',
+      ],
+      keyFeatures: [
+        'Visible carbon-fiber weave texture on all CF surfaces',
+        'M3 bolt holes at arm roots, motor mounts, and standoff positions',
+        'Battery strap slot cutout on the bottom plate',
+        'Slight arm taper (wider at root, narrower at motor mount)',
+        'Chamfered edges on center plates',
+      ],
+      loaderNote: 'Load with THREE.GLTFLoader. Replace the THREE.Group from createMesh() with gltf.scene. Set origin at frame geometric center (mid-height between top and bottom plates). Apply gltf.scene.traverse() to enable castShadow/receiveShadow on all child Meshes.',
+    },
   },
 
   motor: {
@@ -120,6 +177,67 @@ export const partDescriptions = {
     ],
 
     assemblyTips: `1. Use all 4 M3 mounting screws — never fly with fewer (vibration will loosen remaining ones)\n2. Before mounting props, hand-spin each motor checking for any grinding or rough spots\n3. Check shaft straightness: spin the motor and watch the shaft tip for wobble\n4. Route the 3 motor wires cleanly along the arm, secured with zip ties\n5. Motor direction matters: 2 spin CW (motors 1,4), 2 spin CCW (motors 2,3)\n6. If a motor gets hot after flying (too hot to touch), it's either damaged or the prop is wrong`,
+
+    powerStates: {
+      min: {
+        label: 'Idle / Armed-on-Ground (~5% throttle)',
+        description: 'Motor spins at minimum commanded speed, just enough to keep the ESC active and props turning slowly. Almost no thrust is generated. The motor bell rotates at low RPM; windings carry minimal current and run cool. This is the "armed but sitting" state.',
+        metrics: [
+          { label: 'RPM', value: '~3,000–4,000 RPM' },
+          { label: 'Thrust (per motor)', value: '~20–40 g (negligible)' },
+          { label: 'Current Draw', value: '~0.5–0.8 A per motor' },
+          { label: 'Power Consumption', value: '~11–18 W per motor' },
+          { label: 'Motor Temperature', value: '25–35°C (cool, near ambient)' },
+          { label: 'ESC Signal', value: 'DShot digital, ~5% duty' },
+        ],
+      },
+      mid: {
+        label: 'Cruise / Hover (~45–55% throttle)',
+        description: 'Motor at the efficiency sweet spot — spinning fast enough to support steady hover with a small climb margin. This is where the motor spends most of its flight time. Heat is generated but managed effectively. The outrunner bell rotates smoothly; the EMF back-pressure closely tracks the applied voltage.',
+        metrics: [
+          { label: 'RPM', value: '~18,000–23,000 RPM' },
+          { label: 'Thrust (per motor)', value: '~600–800 g' },
+          { label: 'Current Draw', value: '~8–12 A per motor' },
+          { label: 'Power Consumption', value: '~180–265 W per motor' },
+          { label: 'Motor Temperature', value: '55–70°C (warm but safe)' },
+          { label: 'Electrical Efficiency', value: '~88–92%' },
+        ],
+      },
+      max: {
+        label: 'Full Throttle / Maximum Output (100%)',
+        description: 'Motor is pushed to its absolute design limit. All 4 motors combined pull 130–160 A from the battery. Thrust-to-weight ratio peaks at ~7.5:1. Sustained operation at this level for more than a few seconds risks demagnetizing the permanent magnets or melting winding insulation. Used for climbing or extreme acceleration bursts only.',
+        metrics: [
+          { label: 'RPM', value: '~40,000–44,000 RPM' },
+          { label: 'Thrust (per motor)', value: '~1,400–1,600 g' },
+          { label: 'Current Draw', value: '~35–42 A per motor' },
+          { label: 'Power Consumption', value: '~780–930 W per motor' },
+          { label: 'Motor Temperature', value: '80–105°C (very hot — limit exposure)' },
+          { label: 'Prop Tip Speed', value: 'Approaching Mach 0.5' },
+          { label: 'Total 4-Motor Draw', value: '~140–168 A from battery' },
+        ],
+      },
+    },
+
+    glbModel: {
+      suggestedFilename: 'brushless_motor.glb',
+      description: 'A high-detail outrunner BLDC motor showing: the dark stator base with visible winding slots, the silver bell housing (outer rotor) that rotates over the stator, a flat cap on top of the bell, the 5 mm motor shaft protruding upward, a visible copper winding ring in the gap between stator and bell, a base mounting plate with 4 bolt holes, and 3 wire leads (red, black, yellow) exiting the bottom. The bell should be a separate mesh to support programmatic rotation animation.',
+      polyCount: '4,000–12,000 triangles recommended',
+      materials: [
+        'Stator body — dark metal (hex #4a4a55), roughness 0.30, metalness 0.80',
+        'Bell housing — silver (hex #b0b5c0), roughness 0.25, metalness 0.85',
+        'Copper windings — warm copper (hex #c07840), roughness 0.35, metalness 0.90',
+        'Motor shaft — bright silver, roughness 0.15, metalness 0.95',
+        'Wire insulation — red, black, and yellow, roughness 0.60',
+      ],
+      keyFeatures: [
+        'Separate bell mesh for spin animation (rotate Y-axis)',
+        'Visible winding gaps between stator teeth',
+        '4× M3 bolt holes on base mounting plate',
+        '5 mm shaft extending above bell cap',
+        '3 ESC phase wires exiting base',
+      ],
+      loaderNote: 'Load with THREE.GLTFLoader. Find the bell mesh by name (e.g., "bell" or "rotor") and store a reference to animate its Y-axis rotation each frame via: bellMesh.rotation.y += spinSpeed * deltaTime. Ensure origin is at the motor shaft center-bottom.',
+    },
   },
 
   propeller: {
@@ -176,6 +294,65 @@ export const partDescriptions = {
     ],
 
     assemblyTips: `1. CRITICAL: Check prop direction markings! CW props go on CW motors, CCW on CCW\n2. The letter "R" on a prop usually means "reverse" (CCW)\n3. Use nylon lock nuts (nylock) on motor shafts — never fly without them\n4. Inspect every prop before each flight for hairline cracks, nicks, or deformation\n5. After a crash, always replace the prop on the motor that hit — even if it looks fine\n6. For smooth camera footage, balance new props by sanding the heavier blade tip`,
+
+    powerStates: {
+      min: {
+        label: 'Idle Spin (~5% throttle)',
+        description: 'Propeller rotates slowly at low RPM. Blades cut through air at a shallow angle; almost no net downwash is produced. The tip speed is well below transonic — no aerodynamic noise. The prop is essentially spinning in place, consuming almost no energy.',
+        metrics: [
+          { label: 'RPM', value: '~3,000–4,000 RPM' },
+          { label: 'Tip Speed', value: '~20 m/s (72 km/h) — very subsonic' },
+          { label: 'Thrust', value: '~20–40 g per prop' },
+          { label: 'Aerodynamic Drag', value: 'Minimal — blades at low AoA' },
+          { label: 'Noise Level', value: 'Low hum (~55–65 dB at 1 m)' },
+          { label: 'Blade Flex', value: '< 0.5 mm' },
+        ],
+      },
+      mid: {
+        label: 'Cruise / Hover (~50% throttle)',
+        description: 'Propellers operating at their most aerodynamically efficient point. The blade pitch angle produces maximum lift-to-drag ratio. Downwash creates a stable column of accelerated air below the drone. This is the Goldilocks zone — enough thrust to hover with a margin, without excessive current draw.',
+        metrics: [
+          { label: 'RPM', value: '~18,000–23,000 RPM' },
+          { label: 'Tip Speed', value: '~120 m/s (~Mach 0.35)' },
+          { label: 'Thrust', value: '~600–800 g per prop' },
+          { label: 'Propulsive Efficiency', value: '~75–85% (peak efficiency band)' },
+          { label: 'Noise Level', value: 'Moderate buzz (~75–80 dB at 1 m)' },
+          { label: 'Blade Flex', value: '~1–2 mm at tip (centrifugal load)' },
+        ],
+      },
+      max: {
+        label: 'Full Throttle / Maximum RPM (100%)',
+        description: 'Propeller blades near their structural limit. Tip speeds approach the transonic regime where aerodynamic efficiency drops sharply. Centrifugal force pulls blades outward; polycarbonate flexes measurably. The characteristic high-pitched scream comes from blade-tip vortices transitioning to shock waves. This is where props are most likely to shatter on impact.',
+        metrics: [
+          { label: 'RPM', value: '~40,000–44,000 RPM' },
+          { label: 'Tip Speed', value: '~168–175 m/s (Mach 0.49–0.51)' },
+          { label: 'Thrust', value: '~1,400–1,600 g per prop' },
+          { label: 'Centrifugal Force at Tip', value: '~80–120 N' },
+          { label: 'Blade Tip Deflection', value: '~3–5 mm (significant flex)' },
+          { label: 'Noise Level', value: 'Very loud screech (~95–100 dB at 1 m)' },
+          { label: 'Efficiency Drop', value: '~15–25% below peak due to compressibility' },
+        ],
+      },
+    },
+
+    glbModel: {
+      suggestedFilename: 'propeller.glb',
+      description: 'A 5-inch two-blade propeller with a center hub, two swept and tapered airfoil blades (wider at mid-span, tapering toward root and tip), a hexagonal lock nut on top of the hub, and a 5 mm bore for the motor shaft. The blade cross-section should show an airfoil profile (asymmetric, flat bottom, curved top) with slight pitch twist along the span. Both CW and CCW variants are needed (mirror the blade sweep direction).',
+      polyCount: '800–2,500 triangles per prop (lightweight, 11 props total)',
+      materials: [
+        'Blade — translucent polycarbonate (hex #555566), roughness 0.45, metalness 0.15, opacity 0.92',
+        'Hub — dark metal (hex #4a4a55), roughness 0.30, metalness 0.80',
+        'Lock nut — silver metal, roughness 0.20, metalness 0.90',
+      ],
+      keyFeatures: [
+        'True airfoil blade cross-section (not flat)',
+        'Blade pitch twist from root to tip',
+        'CW / CCW variants (mirrored blade sweep)',
+        'Separate hub mesh for assembly attachment point',
+        'Slight blade camber for lift generation visualization',
+      ],
+      loaderNote: 'Load with THREE.GLTFLoader. Store reference to blade group and animate rotation.y each frame: propMesh.rotation.y += spinSpeed * deltaTime. Spin direction: CW props (motors 1, 4) rotate positive Y; CCW props (motors 2, 3) rotate negative Y. Scale to match frame arm length.',
+    },
   },
 
   battery: {
@@ -237,6 +414,67 @@ export const partDescriptions = {
     ],
 
     assemblyTips: `1. Secure with a proper non-slip strap — the battery must NOT shift during aggressive flying\n2. Mount as close to the drone's center of gravity as possible\n3. Use a rubberized battery pad to prevent sliding and dampen vibration\n4. NEVER fly with a puffed, damaged, or dented battery\n5. Check total voltage AND individual cell voltages before each flight\n6. After crashing, immediately check the battery for damage, dents, or warmth\n7. Store batteries in a fireproof LiPo-safe bag when not in use\n8. Never charge unattended — always monitor the charging process`,
+
+    powerStates: {
+      min: {
+        label: 'Idle / Minimum Draw (armed, no throttle)',
+        description: 'Battery powers only the flight controller, ESCs in standby, receiver, and any LEDs. Extremely light current draw — effectively a parasitic load. Cell voltages remain near full charge. The battery can sustain this state for 20–40 minutes before meaningful voltage drop.',
+        metrics: [
+          { label: 'Total Current Draw', value: '~2–4 A (all systems, no motors)' },
+          { label: 'Power Consumed', value: '~45–90 W' },
+          { label: 'Cell Voltage', value: '~4.18–4.20 V per cell (near full)' },
+          { label: 'Internal Resistance Effect', value: 'Negligible voltage sag' },
+          { label: 'Battery Temperature', value: 'Ambient + ~1–2°C' },
+          { label: 'Estimated Runtime at this Load', value: '~20–35 minutes' },
+        ],
+      },
+      mid: {
+        label: 'Cruise / Hover (~50% throttle)',
+        description: 'The most common operating state during flight. Total current around 30–45 A from all four motors at hover throttle. The battery voltage sags ~0.1–0.2 V per cell under this load. Packs stay in their safe operating temperature range. A healthy pack will maintain this output for 3–6 minutes depending on flying style.',
+        metrics: [
+          { label: 'Total Current Draw', value: '~30–45 A (hover throttle)' },
+          { label: 'Power Consumed', value: '~670–1,000 W' },
+          { label: 'Cell Voltage Under Load', value: '~3.85–3.95 V per cell' },
+          { label: 'Voltage Sag', value: '~0.10–0.20 V per cell' },
+          { label: 'Battery Temperature', value: '35–50°C (warm but normal)' },
+          { label: 'Estimated Flight Time', value: '3–6 min (aggressive) / 6–9 min (relaxed)' },
+        ],
+      },
+      max: {
+        label: 'Full Throttle / Peak Discharge (100%)',
+        description: 'Maximum burst power delivery. All motors at full throttle pull 130–165 A combined — nearly the pack\'s C-rating limit. Voltage sags dramatically (0.3–0.5 V per cell), reducing available power and stressing the internal chemistry. Sustained full throttle for more than 5–10 seconds risks cell imbalance, excessive heat, and accelerated wear. A LiPo fire can occur if pushed beyond rated limits.',
+        metrics: [
+          { label: 'Peak Current Draw', value: '~130–165 A (all 4 motors max)' },
+          { label: 'Peak Power Output', value: '~2,900–3,650 W' },
+          { label: 'Cell Voltage Under Full Load', value: '~3.60–3.75 V per cell (heavy sag)' },
+          { label: 'Voltage Sag', value: '~0.35–0.55 V per cell' },
+          { label: 'Battery Temperature', value: '55–80°C (hot — cycle limit approaching)' },
+          { label: 'Internal Resistance Heating', value: '~P = I²R; ~50–90 W as waste heat' },
+          { label: 'Safe Burst Duration', value: '< 10 seconds continuously' },
+        ],
+      },
+    },
+
+    glbModel: {
+      suggestedFilename: 'lipo_battery_6s.glb',
+      description: 'A 6S 1300 mAh LiPo battery pack with a main rectangular body, cylindrical end caps for a rounded profile, a white/grey label strip showing cell count and capacity, a yellow XT60 connector protruding from one end, a small JST-XH balance lead connector, and red + black power wires. The model should convey the compact, dense feel of a LiPo — slightly shorter than a person\'s palm and about as thick as two fingers.',
+      polyCount: '1,500–4,000 triangles recommended',
+      materials: [
+        'Battery body — blue (hex #1a44aa), roughness 0.50, metalness 0.10 (plastic shrink wrap)',
+        'Label strip — light grey/white, roughness 0.70, metalness 0.00 (with text markings)',
+        'XT60 connector — yellow (hex #ddaa00), roughness 0.50, metalness 0.10',
+        'Power wires — red and black PVC, roughness 0.60',
+        'Balance lead — white plastic, roughness 0.65',
+      ],
+      keyFeatures: [
+        'Rounded end cap profile (cylindrical caps on ±X ends)',
+        'Visible XT60 connector with correct 2-pin oval shape',
+        'JST-XH balance lead (6-pin for 6S)',
+        'Printed label with capacity, voltage, and C-rating text',
+        'Subtle seam line around battery body',
+      ],
+      loaderNote: 'Load with THREE.GLTFLoader. Mount at snapPosition (x:0, y:0.7, z:0) on the drone frame underside, held by a simulated strap. Scale so the long axis (X) spans ~0.8 world units to match frame slot dimensions.',
+    },
   },
 
   flightController: {
@@ -298,6 +536,70 @@ export const partDescriptions = {
     ],
 
     assemblyTips: `1. Mount with soft silicone grommets (M3) to isolate vibration from the carbon frame — this is critical\n2. Solder connections carefully — cold or bridged joints cause intermittent failures that are nightmare to debug\n3. Flash and configure firmware BEFORE soldering anything to verify the board is functional\n4. The arrow printed on the FC must point toward the front of the drone\n5. Double-check all UART assignments in Betaflight Configurator before first flight\n6. Apply conformal coating to the board for moisture/dust protection\n7. Keep the gyro area clear — no wires touching or pressing against the IMU chip`,
+
+    powerStates: {
+      min: {
+        label: 'Standby / Armed-Idle',
+        description: 'Flight controller is powered and running Betaflight. The PID loop executes at 8 kHz but output to motors is zeroed (or minimum idle). The gyro samples continuously; barometer and GPS poll at low rates. The FC draws minimal power — essentially waiting for pilot input.',
+        metrics: [
+          { label: 'CPU Load', value: '~15–25% (PID loop + sensor polling)' },
+          { label: 'PID Loop Rate', value: '8,000 Hz active' },
+          { label: 'Current Draw (FC only)', value: '~120–160 mA @ 5V' },
+          { label: 'Power Consumption', value: '~0.6–0.8 W' },
+          { label: 'FC Temperature', value: '30–40°C (processor warm-up)' },
+          { label: 'Gyro Sample Rate', value: '6,400 Hz (BMI270)' },
+        ],
+      },
+      mid: {
+        label: 'Active Flight / Standard Operation',
+        description: 'Full active flight. The processor runs at 480 MHz, executing the full PID control chain including RPM-based filtering, dynamic notch filters, motor mixing, and OSD graphics rendering every frame. Blackbox logging is active (writing ~2 MB per minute to flash). All UART peripherals are polling. This is normal operating state.',
+        metrics: [
+          { label: 'CPU Load', value: '~55–75%' },
+          { label: 'PID Corrections/sec', value: '8,000 (every 125 µs)' },
+          { label: 'Current Draw (FC only)', value: '~180–220 mA @ 5V' },
+          { label: 'Power Consumption', value: '~0.9–1.1 W' },
+          { label: 'FC Temperature', value: '50–65°C (active cooling from airflow)' },
+          { label: 'Blackbox Log Rate', value: '~2,000 entries/sec' },
+          { label: 'Motor Command Update Rate', value: '8,000 Hz via DShot600' },
+        ],
+      },
+      max: {
+        label: 'Maximum Processing Load (GPS rescue + logging + full filtering)',
+        description: 'All computational features simultaneously active: GPS rescue algorithm computing return path, full RPM-based harmonic notch filter stack, DShot bidirectional telemetry, OSD rendering, Blackbox at maximum rate, barometer altitude hold, and an active RC link. The H7 processor approaches its thermal limit without airflow cooling.',
+        metrics: [
+          { label: 'CPU Load', value: '~85–95%' },
+          { label: 'Active Features', value: 'GPS rescue + RPM filter + Blackbox + OSD + telemetry' },
+          { label: 'Current Draw (FC only)', value: '~250–300 mA @ 5V' },
+          { label: 'Power Consumption', value: '~1.25–1.5 W' },
+          { label: 'FC Temperature (no airflow)', value: '75–90°C (thermal throttle risk)' },
+          { label: 'FC Temperature (in-flight airflow)', value: '50–65°C (safe)' },
+          { label: 'Filter Latency Added', value: '~1–2 ms (notch + RPM stacks)' },
+        ],
+      },
+    },
+
+    glbModel: {
+      suggestedFilename: 'flight_controller_h7.glb',
+      description: 'A 30.5 × 30.5 mm green PCB flight controller with: a large central ARM processor chip (black, square, ~13 × 13 mm), a smaller IMU chip offset from center, an OSD chip, 3 electrolytic capacitors (upright cylinders), two rows of gold pin headers on opposite edges, a micro-USB port on one edge, a green LED indicator, four corner mounting holes with chamfers (for M3 rubber grommets), and visible copper PCB traces etched on the board surface. The top surface has component markings and a directional arrow.',
+      polyCount: '3,000–8,000 triangles recommended',
+      materials: [
+        'PCB substrate — green (hex #0d7a3a), roughness 0.60, metalness 0.05',
+        'Copper traces — warm gold (hex #d4a840), roughness 0.25, metalness 0.80 (subtle traces on surface)',
+        'ICs / chips — black (hex #1a1a1a), roughness 0.30, metalness 0.15',
+        'Pin headers — black housing + gold pins (hex #d4a840), metalness 0.95',
+        'Capacitors — dark metallic cylinders with colored bands',
+        'USB port — silver metal, roughness 0.20, metalness 0.90',
+        'LED — green emissive (hex #00ff44), emissiveIntensity 0.8',
+      ],
+      keyFeatures: [
+        'Component-level detail: chips, caps, pin headers, USB port',
+        'Visible directional arrow (⬆ FRONT) printed on PCB surface',
+        'Mounting hole chamfers at all 4 corners',
+        'Green LED with emissive material',
+        'Subtle PCB copper trace pattern on board surface',
+      ],
+      loaderNote: 'Load with THREE.GLTFLoader. Mount flat (XZ plane) at snapPosition (x:0, y:1.12, z:0). Ensure the forward arrow points toward positive Z (drone front). The LED mesh should pulse its emissiveIntensity in code to simulate armed/unarmed status.',
+    },
   },
 
   camera: {
@@ -358,6 +660,71 @@ export const partDescriptions = {
     ],
 
     assemblyTips: `1. Mount at the very front of the frame, tilted up 25-35° from horizontal\n2. Use an adjustable camera mount that allows tilt angle changes (you'll want to experiment)\n3. Secure with both side screws — don't skip one even if it seems tight enough\n4. Route the video cable along the arm underside to avoid any prop contact\n5. Apply a small bead of hot glue to the connector for crash resilience (easy to remove later)\n6. Protect the lens with the spare lens cap during transport\n7. Clean the lens before flying — fingerprints cause noticeable haze in the video feed`,
+
+    powerStates: {
+      min: {
+        label: 'Powered / Standby (no active flight)',
+        description: 'Camera receives 5–12 V power from the video transmitter or direct battery line. The image sensor initializes; auto-exposure and auto-gain circuits lock onto the scene. The sensor reads out continuously but the drone is on the ground. The pilot\'s goggles show a stationary ground view. Latency is at its lowest (<12 ms) because the scene is static.',
+        metrics: [
+          { label: 'Power State', value: 'On — sensor active, lens pointed at ground/scene' },
+          { label: 'Input Voltage', value: '5–12 V from VTX or filtered supply' },
+          { label: 'Current Draw', value: '~60–90 mA' },
+          { label: 'Power Consumption', value: '~0.3–1.1 W' },
+          { label: 'Image Latency', value: '<12 ms glass-to-glass' },
+          { label: 'Auto-Exposure State', value: 'Locking on ambient light scene' },
+          { label: 'Temperature', value: '30–40°C (sensor warm from power)' },
+        ],
+      },
+      mid: {
+        label: 'Active Flight / Nominal Operation',
+        description: 'Camera streams live video at full frame rate during flight. The Wide Dynamic Range (WDR) circuit constantly adjusts per-pixel exposure to handle bright sky and dark ground simultaneously. The image stabilizer (if present) compensates for vibration. The video transmitter is broadcasting this feed to the pilot\'s goggles in real-time.',
+        metrics: [
+          { label: 'Frame Rate', value: '60–100 fps (analog) / 60 fps (digital)' },
+          { label: 'Resolution', value: '1200 TVL (analog) or 720p60 (digital)' },
+          { label: 'Current Draw', value: '~80–120 mA' },
+          { label: 'Power Consumption', value: '~0.4–1.4 W' },
+          { label: 'WDR Mode', value: 'Active — blending short/long exposures per frame' },
+          { label: 'Latency', value: '<15 ms steady-state' },
+          { label: 'Temperature', value: '40–55°C (sensor + VTX heat in nacelle)' },
+        ],
+      },
+      max: {
+        label: 'Maximum Sensitivity / Low-Light / Full Dynamic Range',
+        description: 'Camera pushed to its sensor limits — flying at dusk, dawn, or indoors with mixed lighting. The Sony Starvis sensor activates maximum analog gain and longest safe exposure time. The WDR algorithm performs frame-stacking to reveal shadow detail without blowing highlights. Noise becomes visible in the feed but the scene remains intelligible. This is where quality FPV cameras separate from consumer-grade sensors.',
+        metrics: [
+          { label: 'Minimum Illumination', value: '0.001 Lux (near complete darkness)' },
+          { label: 'Analog Gain', value: 'Maximum (highest sensitivity mode)' },
+          { label: 'Exposure Time', value: 'Near-maximum (motion blur risk at speed)' },
+          { label: 'Current Draw', value: '~110–140 mA (max gain circuitry active)' },
+          { label: 'Power Consumption', value: '~0.6–1.7 W' },
+          { label: 'Dynamic Range', value: '~120 dB with WDR stacking' },
+          { label: 'Latency Increase', value: '+1–3 ms (extra processing for WDR)' },
+          { label: 'Temperature', value: '50–65°C (image sensor under heavy load)' },
+        ],
+      },
+    },
+
+    glbModel: {
+      suggestedFilename: 'fpv_camera.glb',
+      description: 'A miniature FPV camera unit featuring a compact rectangular carbon-fiber housing (~20 × 20 × 16 mm), a forward-pointing cylindrical lens barrel with a convex glass element at the front, a silver lens accent ring, a thin aluminium L-bracket mount on each side for tilt-angle adjustment, two tilt-lock screws, and a thin video cable exiting the rear. The lens should be clearly the visual focal point of the model. Overall feel: dense, industrial, miniaturized.',
+      polyCount: '1,500–4,000 triangles recommended',
+      materials: [
+        'Camera housing — dark carbon (hex #1a1a1e), roughness 0.35, metalness 0.10',
+        'Lens barrel — dark metal (hex #4a4a55), roughness 0.30, metalness 0.80',
+        'Lens glass — near-black (hex #111122), roughness 0.05, metalness 0.30, transparent opacity 0.85',
+        'Lens ring accent — silver, roughness 0.20, metalness 0.90',
+        'Mount bracket — silver aluminium, roughness 0.30, metalness 0.75',
+        'Video cable — black, roughness 0.60',
+      ],
+      keyFeatures: [
+        'Convex glass lens element clearly visible at front',
+        'Tilted mount position (25–35° upward from horizontal)',
+        'Side bracket tilt slots visible',
+        'Video cable exiting rear of housing',
+        'Compact size relative to other components (~20 mm wide)',
+      ],
+      loaderNote: 'Load with THREE.GLTFLoader. Position at snapPosition (x:0, y:0.88, z:0.52) facing positive Z (front of drone). Apply a 25–30° rotation around X-axis to simulate upward camera tilt. The lens glass mesh should be a separate mesh with the transparent material applied in Three.js post-load.',
+    },
   },
 };
 
