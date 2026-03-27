@@ -44,7 +44,7 @@ export function detectHands(timestamp) {
   if (videoElement.readyState < 2) return lastResults;
 
   // Ensure strictly increasing timestamps (required by MediaPipe, can repeat on mobile)
-  const ts = Math.max(Math.round(timestamp), lastTimestamp + 1);
+  const ts = timestamp > lastTimestamp ? timestamp : lastTimestamp + 1;
   lastTimestamp = ts;
 
   try {
