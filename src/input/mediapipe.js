@@ -4,6 +4,7 @@ let handLandmarker = null;
 let lastResults = null;
 let videoElement = null;
 let running = false;
+let lastTimestamp = -1;
 
 async function createHandLandmarker(vision, delegate) {
   return HandLandmarker.createFromOptions(vision, {
@@ -14,9 +15,9 @@ async function createHandLandmarker(vision, delegate) {
     },
     runningMode: 'VIDEO',
     numHands: 1,
-    minHandDetectionConfidence: 0.7,
-    minHandPresenceConfidence: 0.6,
-    minTrackingConfidence: 0.6,
+    minHandDetectionConfidence: 0.55,
+    minHandPresenceConfidence: 0.5,
+    minTrackingConfidence: 0.45,
   });
 }
 
@@ -42,8 +43,12 @@ export function detectHands(timestamp) {
   if (!handLandmarker || !videoElement || !running) return null;
   if (videoElement.readyState < 2) return lastResults;
 
+  // Ensure strictly increasing timestamps (required by MediaPipe, can repeat on mobile)
+  const ts = timestamp > lastTimestamp ? timestamp : lastTimestamp + 1;
+  lastTimestamp = ts;
+
   try {
-    lastResults = handLandmarker.detectForVideo(videoElement, timestamp);
+    lastResults = handLandmarker.detectForVideo(videoElement, ts);
   } catch (e) {
     // Occasionally frame timing can cause issues; skip frame
     return lastResults;

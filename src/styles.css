@@ -987,4 +987,80 @@ canvas#three-canvas {
     font-size: 0.65rem;
     padding: 0 10px;
   }
+
+  #webcam-container {
+    width: 120px;
+    height: 90px;
+    bottom: 8px;
+    left: 8px;
+    border-radius: 8px;
+  }
+
+  #hud {
+    font-size: 10px;
+    top: 8px;
+    left: 8px;
+  }
+
+  #collab-panel {
+    top: 8px;
+    right: 8px;
+  }
+
+  .collab-input {
+    width: 80px;
+    font-size: 0.7rem;
+    padding: 4px 6px;
+  }
+
+  .collab-btn {
+    font-size: 0.65rem;
+    padding: 4px 8px;
+  }
+
+  #camera-overlay h1 {
+    font-size: 1.5rem;
+    letter-spacing: 1.5px;
+  }
+
+  #camera-overlay .subtitle {
+    font-size: 0.85rem;
+  }
+
+  #camera-overlay p {
+    font-size: 0.8rem;
+    max-width: 90vw;
+    padding: 0 16px;
+  }
+
+  #allow-camera-btn {
+    padding: 12px 36px;
+    font-size: 0.95rem;
+  }
+
+  #skip-camera-btn {
+    padding: 8px 24px;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #webcam-container {
+    width: 90px;
+    height: 68px;
+    bottom: 6px;
+    left: 6px;
+    border-radius: 6px;
+  }
+
+  #hud {
+    font-size: 9px;
+    top: 6px;
+    left: 6px;
+  }
+
+  #hint-bar {
+    font-size: 0.55rem;
+    bottom: 8px;
+  }
 }

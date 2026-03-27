@@ -54,32 +54,32 @@ export function detectGesture(landmarks, worldLandmarks) {
   });
   if (motionHistory.length > MAX_HISTORY) motionHistory.shift();
 
-  // Check PINCH: distance(thumb_tip, index_tip) < 0.042 && distance(thumb_ip, index_ip) > 0.09
+  // Check PINCH: distance(thumb_tip, index_tip) < 0.05 && distance(thumb_ip, index_ip) > 0.07
   const pinchDist = dist(lm[THUMB_TIP], lm[INDEX_TIP]);
   const pinchSpread = dist(lm[THUMB_IP], lm[INDEX_PIP]);
-  if (pinchDist < 0.042 && pinchSpread > 0.09) {
+  if (pinchDist < 0.05 && pinchSpread > 0.07) {
     return { gesture: 'PINCH', landmarks, worldLandmarks, pinchPoint: lm[THUMB_TIP] };
   }
 
-  // Check CLOSED_FIST: all fingers curled
-  // Spec: tip.y < pip.y - 0.065 && tip.y < mcp.y - 0.09 for all five
-  const thumbCurled = (lm[THUMB_TIP].y < lm[THUMB_IP].y - 0.065) && (lm[THUMB_TIP].y < lm[THUMB_MCP].y - 0.09);
-  const indexCurled = (lm[INDEX_TIP].y < lm[INDEX_PIP].y - 0.065) && (lm[INDEX_TIP].y < lm[INDEX_MCP].y - 0.09);
-  const middleCurled = (lm[MIDDLE_TIP].y < lm[MIDDLE_PIP].y - 0.065) && (lm[MIDDLE_TIP].y < lm[MIDDLE_MCP].y - 0.09);
-  const ringCurled = (lm[RING_TIP].y < lm[RING_PIP].y - 0.065) && (lm[RING_TIP].y < lm[RING_MCP].y - 0.09);
-  const pinkyCurled = (lm[PINKY_TIP].y < lm[PINKY_PIP].y - 0.065) && (lm[PINKY_TIP].y < lm[PINKY_MCP].y - 0.09);
+  // Distance-based finger state (orientation-independent, works on mobile)
+  const thumbCurled = isFingerCurled(lm, THUMB_TIP, THUMB_IP, THUMB_MCP);
+  const indexCurled = isFingerCurled(lm, INDEX_TIP, INDEX_PIP, INDEX_MCP);
+  const middleCurled = isFingerCurled(lm, MIDDLE_TIP, MIDDLE_PIP, MIDDLE_MCP);
+  const ringCurled = isFingerCurled(lm, RING_TIP, RING_PIP, RING_MCP);
+  const pinkyCurled = isFingerCurled(lm, PINKY_TIP, PINKY_PIP, PINKY_MCP);
 
+  const thumbExtended = isFingerExtended(lm, THUMB_TIP, THUMB_MCP);
+  const indexExtended = isFingerExtended(lm, INDEX_TIP, INDEX_MCP);
+  const middleExtended = isFingerExtended(lm, MIDDLE_TIP, MIDDLE_MCP);
+  const ringExtended = isFingerExtended(lm, RING_TIP, RING_MCP);
+  const pinkyExtended = isFingerExtended(lm, PINKY_TIP, PINKY_MCP);
+
+  // Check CLOSED_FIST: all fingers curled (distance-based)
   if (thumbCurled && indexCurled && middleCurled && ringCurled && pinkyCurled) {
     return { gesture: 'CLOSED_FIST', landmarks, worldLandmarks };
   }
 
-  // Check OPEN_HAND: all tips.y > mcp.y + 0.14 AND palm normal dot(camera forward) > 0.65
-  const thumbExtended = lm[THUMB_TIP].y > lm[THUMB_MCP].y + 0.14;
-  const indexExtended = lm[INDEX_TIP].y > lm[INDEX_MCP].y + 0.14;
-  const middleExtended = lm[MIDDLE_TIP].y > lm[MIDDLE_MCP].y + 0.14;
-  const ringExtended = lm[RING_TIP].y > lm[RING_MCP].y + 0.14;
-  const pinkyExtended = lm[PINKY_TIP].y > lm[PINKY_MCP].y + 0.14;
-
+  // Check OPEN_HAND: all fingers extended (distance-based)
   if (thumbExtended && indexExtended && middleExtended && ringExtended && pinkyExtended) {
     return { gesture: 'OPEN_HAND', landmarks, worldLandmarks };
   }

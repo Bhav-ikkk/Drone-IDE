@@ -140,7 +140,7 @@ export function createPartDefinitions() {
 
       // Center top plate (octagonal)
       const topPlate = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.55, 0.55, 0.04, 8),
+        new THREE.CylinderGeometry(0.55, 0.55, 0.04, 16),
         cf
       );
       topPlate.position.y = 0.06;
@@ -148,7 +148,7 @@ export function createPartDefinitions() {
 
       // Center bottom plate
       const bottomPlate = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.5, 0.5, 0.04, 8),
+        new THREE.CylinderGeometry(0.5, 0.5, 0.04, 16),
         cf
       );
       bottomPlate.position.y = -0.06;
@@ -158,7 +158,7 @@ export function createPartDefinitions() {
       for (let i = 0; i < 4; i++) {
         const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
         const standoff = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.025, 0.025, 0.08, 8),
+          new THREE.CylinderGeometry(0.025, 0.025, 0.08, 12),
           Materials.metalSilver()
         );
         standoff.position.set(Math.cos(angle) * 0.32, 0, Math.sin(angle) * 0.32);
@@ -181,7 +181,7 @@ export function createPartDefinitions() {
 
         // Motor mount platform at arm tip
         const mount = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.19, 0.19, 0.03, 16),
+          new THREE.CylinderGeometry(0.19, 0.19, 0.03, 24),
           cf
         );
         mount.position.set(offset.x, -0.02, offset.z);
@@ -189,7 +189,7 @@ export function createPartDefinitions() {
 
         // Landing leg
         const leg = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.02, 0.015, 0.4, 6),
+          new THREE.CylinderGeometry(0.02, 0.015, 0.4, 8),
           Materials.rubber()
         );
         leg.position.set(offset.x, -0.24, offset.z);
@@ -197,7 +197,7 @@ export function createPartDefinitions() {
 
         // Landing foot pad
         const foot = new THREE.Mesh(
-          new THREE.SphereGeometry(0.035, 8, 6),
+          new THREE.SphereGeometry(0.035, 12, 8),
           Materials.rubber()
         );
         foot.position.set(offset.x, -0.44, offset.z);
@@ -233,7 +233,7 @@ export function createPartDefinitions() {
 
         // Stator base (dark metal)
         const stator = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.13, 0.14, 0.12, 20),
+          new THREE.CylinderGeometry(0.13, 0.14, 0.12, 24),
           Materials.metalDark()
         );
         stator.position.y = -0.02;
@@ -241,7 +241,7 @@ export function createPartDefinitions() {
 
         // Bell housing (silver, outer rotor)
         const bell = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.16, 0.15, 0.14, 20),
+          new THREE.CylinderGeometry(0.16, 0.15, 0.14, 24),
           Materials.metalSilver()
         );
         bell.position.y = 0.09;
@@ -249,7 +249,7 @@ export function createPartDefinitions() {
 
         // Bell top cap
         const cap = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.14, 0.16, 0.02, 20),
+          new THREE.CylinderGeometry(0.14, 0.16, 0.02, 24),
           Materials.metalSilver()
         );
         cap.position.y = 0.17;
@@ -257,7 +257,7 @@ export function createPartDefinitions() {
 
         // Shaft
         const shaft = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8),
+          new THREE.CylinderGeometry(0.02, 0.02, 0.12, 12),
           Materials.metalSilver()
         );
         shaft.position.y = 0.24;
@@ -265,7 +265,7 @@ export function createPartDefinitions() {
 
         // Windings visible at gap (copper ring)
         const winding = new THREE.Mesh(
-          new THREE.TorusGeometry(0.12, 0.015, 8, 20),
+          new THREE.TorusGeometry(0.12, 0.015, 12, 24),
           Materials.copper()
         );
         winding.rotation.x = Math.PI / 2;
@@ -274,7 +274,7 @@ export function createPartDefinitions() {
 
         // Base mounting plate
         const basePlate = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.17, 0.17, 0.02, 20),
+          new THREE.CylinderGeometry(0.17, 0.17, 0.02, 24),
           Materials.metalDark()
         );
         basePlate.position.y = -0.09;
@@ -314,14 +314,14 @@ export function createPartDefinitions() {
 
         // Hub center
         const hub = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.04, 0.04, 0.03, 12),
+          new THREE.CylinderGeometry(0.04, 0.04, 0.03, 16),
           Materials.metalDark()
         );
         group.add(hub);
 
         // Lock nut on top
         const nut = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.025, 0.025, 0.02, 6),
+          new THREE.CylinderGeometry(0.025, 0.025, 0.02, 8),
           Materials.metalSilver()
         );
         nut.position.y = 0.025;
@@ -384,7 +384,7 @@ export function createPartDefinitions() {
       // Rounded end caps (using cylinders)
       [-0.4, 0.4].forEach((xPos) => {
         const endCap = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.16, 0.16, 0.44, 12),
+          new THREE.CylinderGeometry(0.16, 0.16, 0.44, 16),
           Materials.batteryBlue()
         );
         endCap.rotation.z = Math.PI / 2;
@@ -496,7 +496,7 @@ export function createPartDefinitions() {
       // Capacitors (small cylinders)
       for (let i = 0; i < 3; i++) {
         const cap = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.015, 0.015, 0.04, 8),
+          new THREE.CylinderGeometry(0.015, 0.015, 0.04, 12),
           Materials.metalDark()
         );
         cap.position.set(0.2, 0.05, -0.1 + i * 0.08);
@@ -533,7 +533,7 @@ export function createPartDefinitions() {
 
       // LED indicators
       const led = new THREE.Mesh(
-        new THREE.SphereGeometry(0.012, 6, 6),
+        new THREE.SphereGeometry(0.012, 10, 10),
         Materials.ledGreen()
       );
       led.position.set(0.18, 0.04, 0.16);
@@ -543,7 +543,7 @@ export function createPartDefinitions() {
       for (let i = 0; i < 4; i++) {
         const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
         const hole = new THREE.Mesh(
-          new THREE.TorusGeometry(0.018, 0.004, 6, 12),
+          new THREE.TorusGeometry(0.018, 0.004, 8, 16),
           Materials.metalSilver()
         );
         hole.rotation.x = Math.PI / 2;
@@ -578,7 +578,7 @@ export function createPartDefinitions() {
 
       // Lens barrel (cylinder)
       const barrel = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.08, 0.09, 0.12, 16),
+        new THREE.CylinderGeometry(0.08, 0.09, 0.12, 24),
         Materials.metalDark()
       );
       barrel.rotation.x = Math.PI / 2;
@@ -587,7 +587,7 @@ export function createPartDefinitions() {
 
       // Lens glass (sphere front)
       const lens = new THREE.Mesh(
-        new THREE.SphereGeometry(0.065, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.SphereGeometry(0.065, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2),
         Materials.lensGlass()
       );
       lens.rotation.x = -Math.PI / 2;
@@ -596,7 +596,7 @@ export function createPartDefinitions() {
 
       // Lens ring (accent)
       const lensRing = new THREE.Mesh(
-        new THREE.TorusGeometry(0.075, 0.008, 8, 20),
+        new THREE.TorusGeometry(0.075, 0.008, 12, 24),
         Materials.metalSilver()
       );
       lensRing.rotation.x = Math.PI / 2;
