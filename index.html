@@ -204,6 +204,164 @@
       margin-top: 20px;
     }
 
+    /* ========== POWER STATES ========== */
+    .power-states-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .power-state-card {
+      border-radius: 10px;
+      padding: 14px 16px;
+      border-width: 1px;
+      border-style: solid;
+    }
+    .state-min {
+      background: rgba(30, 80, 180, 0.10);
+      border-color: rgba(60, 120, 255, 0.25);
+    }
+    .state-mid {
+      background: rgba(180, 130, 0, 0.10);
+      border-color: rgba(255, 190, 0, 0.28);
+    }
+    .state-max {
+      background: rgba(200, 40, 40, 0.10);
+      border-color: rgba(255, 80, 60, 0.28);
+    }
+    .power-state-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .power-state-icon { font-size: 1rem; flex-shrink: 0; }
+    .power-level-badge {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .level-min { background: rgba(60,120,255,0.2); color: #7eb8ff; border: 1px solid rgba(60,120,255,0.35); }
+    .level-mid { background: rgba(255,190,0,0.2); color: #ffd060; border: 1px solid rgba(255,190,0,0.40); }
+    .level-max { background: rgba(255,80,60,0.2); color: #ff8870; border: 1px solid rgba(255,80,60,0.40); }
+    .power-state-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #d0d8e8;
+      line-height: 1.3;
+    }
+    .power-state-desc {
+      font-size: 0.82rem;
+      color: #8898b0;
+      line-height: 1.6;
+      margin: 0 0 10px 0;
+    }
+    .power-metrics-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+    }
+    .power-metrics-table tr { border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .power-metrics-table tr:last-child { border-bottom: none; }
+    .pm-label {
+      font-size: 0.76rem;
+      color: #556677;
+      font-weight: 600;
+      padding: 4px 10px 4px 0;
+      width: 52%;
+      vertical-align: top;
+    }
+    .pm-value {
+      font-size: 0.76rem;
+      color: #a0b8cc;
+      font-family: 'Consolas', monospace;
+      padding: 4px 0;
+      vertical-align: top;
+    }
+
+    /* ========== GLB MODEL CARD ========== */
+    .glb-model-card {
+      background: rgba(0, 255, 180, 0.03);
+      border: 1px solid rgba(0, 255, 180, 0.18);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .glb-model-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .glb-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+    .glb-file-info { flex: 1; min-width: 0; }
+    .glb-filename {
+      font-family: 'Consolas', monospace;
+      font-size: 0.85rem;
+      color: #70e8c0;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .glb-polycount {
+      font-size: 0.74rem;
+      color: #556677;
+      margin-top: 2px;
+    }
+    .glb-badge {
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(0,255,180,0.12);
+      color: #50d8a0;
+      border: 1px solid rgba(0,255,180,0.25);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .glb-description {
+      font-size: 0.81rem;
+      color: #8898b0;
+      line-height: 1.65;
+      margin: 0 0 12px;
+    }
+    .glb-subsection { margin-top: 10px; }
+    .glb-subsection-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #aabbc8;
+      margin-bottom: 5px;
+      letter-spacing: 0.2px;
+    }
+    .glb-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .glb-list li {
+      font-size: 0.78rem;
+      color: #8898b0;
+      padding: 3px 0 3px 18px;
+      position: relative;
+      line-height: 1.5;
+    }
+    .glb-list li::before {
+      content: '›';
+      position: absolute;
+      left: 4px;
+      color: #40c0a0;
+      font-weight: bold;
+    }
+    .glb-note {
+      font-size: 0.78rem;
+      color: #7a90a0;
+      line-height: 1.6;
+      margin: 0;
+      font-style: italic;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       #info-panel { width: 100%; right: -100%; }
@@ -235,7 +393,7 @@
     <div class="hud-line" id="hud-gesture">Gesture: NONE</div>
     <div class="hud-line" id="hud-state">State: IDLE</div>
   </div>
-  <div id="hint-bar">Click any drone part to learn about it &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Drag to orbit</div>
+  <div id="hint-bar">Click any drone part to explore specs, power states &amp; 3D model info &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Drag to orbit</div>
 
   <!-- Info Panel -->
   <div id="info-panel">

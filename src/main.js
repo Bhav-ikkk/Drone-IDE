@@ -30,6 +30,7 @@ import { startFlight, stopFlight, isFlying, updateFlight, updatePropellers } fro
 import { updateHUD } from './ui/hud.js';
 import { createLabels, updateLabels, setLabelsVisible } from './ui/labels.js';
 import { createOverlays, updateOverlays, toggleOverlays } from './ui/overlays.js';
+import { initInfoPanel, showPartInfo } from './ui/infoPanel.js';
 
 // ========== STATE ==========
 let renderer, scene, camera;
@@ -53,6 +54,10 @@ const mouseNdc = new THREE.Vector2(0, 0);
 const pointerRaycaster = new THREE.Raycaster();
 let mouseDown = false;
 let dragSource = 'NONE'; // NONE | MOUSE | HAND
+
+// Click detection (distinguish drag from click)
+let pointerDragged = false;
+let pointerDownClientPos = { x: 0, y: 0 };
 
 // Fixed timestep
 const FIXED_DT = 1 / 60;
@@ -156,6 +161,12 @@ async function init() {
   // Create labels & overlays
   createLabels(parts, scene);
   createOverlays(parts, scene);
+
+  // Init info panel
+  initInfoPanel(() => {
+    const controls = getControls();
+    if (controls) controls.enabled = true;
+  });
 
   // Create virtual cursor (visible sphere)
   const cursorGeo = new THREE.SphereGeometry(0.08, 12, 12);
@@ -307,7 +318,11 @@ function gameLoop(timestamp) {
   updateHUD(frameTime, currentGesture, appState);
 
   // ---- RENDER ----
-  renderer.render(scene, camera);
+  try {
+    renderer.render(scene, camera);
+  } catch (err) {
+    console.warn('Render error (frame skipped):', err);
+  }
 }
 
 // ========== GESTURE STATE MACHINE ==========
@@ -423,6 +438,11 @@ function handleGestureState(gestureData, dt) {
 
 function setupMouseControls(canvas) {
   canvas.addEventListener('pointermove', (e) => {
+    // Track drag distance to distinguish click vs drag (compare squared to avoid sqrt)
+    const dx = e.clientX - pointerDownClientPos.x;
+    const dy = e.clientY - pointerDownClientPos.y;
+    if (dx * dx + dy * dy > 25) pointerDragged = true;
+
     updateMouseNdc(canvas, e);
     if (dragSource !== 'HAND') {
       const cursorPos = getPointerWorldPoint();
@@ -444,10 +464,17 @@ function setupMouseControls(canvas) {
   });
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || isAssembled() || isFlying()) return;
+    if (e.button !== 0) return;
+
+    // Reset click/drag tracking
+    pointerDragged = false;
+    pointerDownClientPos = { x: e.clientX, y: e.clientY };
 
     mouseDown = true;
     updateMouseNdc(canvas, e);
+
+    // Don't start drag when assembled or flying
+    if (isAssembled() || isFlying()) return;
 
     const nearest = pickNearestPart();
     if (!nearest) return;
@@ -460,6 +487,18 @@ function setupMouseControls(canvas) {
     const controls = getControls();
     if (controls) controls.enabled = false;
     appState = 'DRAGGING';
+  });
+
+  // Click handler: show info panel for any part click (works in all states)
+  canvas.addEventListener('click', (e) => {
+    if (pointerDragged) return; // Was a real drag, not a click
+    updateMouseNdc(canvas, e);
+    const nearest = pickNearestPart();
+    if (nearest) {
+      showPartInfo(nearest.id);
+      const controls = getControls();
+      if (controls) controls.enabled = false;
+    }
   });
 
   const endMouseDrag = () => {
@@ -496,11 +535,20 @@ function pickNearestPart() {
 
   pointerRaycaster.setFromCamera(mouseNdc, camera);
   const meshes = parts.map((p) => p.mesh);
-  const hits = pointerRaycaster.intersectObjects(meshes, false);
+  // Use recursive=true because drone parts are THREE.Group with child Meshes
+  const hits = pointerRaycaster.intersectObjects(meshes, true);
   if (!hits.length) return null;
 
-  const hitMesh = hits[0].object;
-  return parts.find((p) => p.mesh === hitMesh) || null;
+  const hitObject = hits[0].object;
+  // Walk up the object hierarchy to find which part group was hit
+  return parts.find((p) => {
+    let obj = hitObject;
+    while (obj) {
+      if (obj === p.mesh) return true;
+      obj = obj.parent;
+    }
+    return false;
+  }) || null;
 }
 
 function areLandmarksValid(landmarks) {
