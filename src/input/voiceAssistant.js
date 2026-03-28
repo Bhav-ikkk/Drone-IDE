@@ -27,12 +27,14 @@ const SLEEP_PHRASES = [
   'stop listening',
 ];
 
-const ACTIVE_TIMEOUT_MS = 8000;
+const ACTIVE_TIMEOUT_MS = 15000;
 
 let recognition = null;
 let isActive = false;
 let supported = false;
 let activeTimer = null;
+let isSpeaking = false;
+let restartTimer = null;
 
 let _onCommand = null;
 let _onStatusChange = null;
@@ -102,9 +104,15 @@ export function initVoiceAssistant({ onCommand, onStatusChange } = {}) {
   recognition.onresult = _handleResult;
   recognition.onerror = _handleError;
   recognition.onend = () => {
-    if (recognition && supported) {
-      try { recognition.start(); } catch (_e) { /* already started */ }
-    }
+    if (!supported) return;
+    if (isSpeaking) return; // Don't restart while TTS is active
+    // Delay restart to avoid rapid restart loops
+    clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      if (supported && !isSpeaking) {
+        _startRecognition();
+      }
+    }, 300);
   };
 
   _startRecognition();
@@ -115,12 +123,14 @@ export function initVoiceAssistant({ onCommand, onStatusChange } = {}) {
 export function stopVoiceAssistant() {
   supported = false;
   if (activeTimer) clearTimeout(activeTimer);
+  if (restartTimer) clearTimeout(restartTimer);
   if (recognition) {
     recognition.onend = null;
     try { recognition.stop(); } catch (_e) { /* ignore */ }
     recognition = null;
   }
   isActive = false;
+  isSpeaking = false;
   if (orbEl && orbEl.parentNode) orbEl.parentNode.removeChild(orbEl);
   orbEl = null;
 }
@@ -248,7 +258,15 @@ function _processCommand(text) {
 }
 
 function _handleError(event) {
-  if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'aborted') return;
+  if (event.error === 'no-speech' || event.error === 'aborted') return;
+  if (event.error === 'audio-capture') {
+    // Mic may be temporarily busy (e.g. TTS); retry after delay
+    clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      if (supported && !isSpeaking) _startRecognition();
+    }, 1000);
+    return;
+  }
   if (event.error === 'not-allowed') {
     _setStatus('UNSUPPORTED');
     _setOrbState('unsupported');
@@ -290,6 +308,13 @@ export function speak(text) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
 
+  isSpeaking = true;
+
+  // Pause recognition while TTS is active to avoid conflicts
+  if (recognition) {
+    try { recognition.stop(); } catch (_e) { /* ignore */ }
+  }
+
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'en-US';
   utterance.rate = 0.95;
@@ -313,7 +338,24 @@ export function speak(text) {
 
 function _doSpeak(utterance) {
   utterance.onstart = () => { _setStatus('SPEAKING'); _setOrbState('speaking'); };
-  utterance.onend = () => { _setStatus(isActive ? 'ACTIVE' : 'WAITING'); _setOrbState(isActive ? 'active' : 'idle'); };
-  utterance.onerror = () => { _setStatus(isActive ? 'ACTIVE' : 'WAITING'); _setOrbState(isActive ? 'active' : 'idle'); };
+  utterance.onend = () => {
+    isSpeaking = false;
+    _setStatus(isActive ? 'ACTIVE' : 'WAITING');
+    _setOrbState(isActive ? 'active' : 'idle');
+    // Resume recognition after TTS finishes
+    if (supported) {
+      clearTimeout(restartTimer);
+      restartTimer = setTimeout(() => _startRecognition(), 200);
+    }
+  };
+  utterance.onerror = () => {
+    isSpeaking = false;
+    _setStatus(isActive ? 'ACTIVE' : 'WAITING');
+    _setOrbState(isActive ? 'active' : 'idle');
+    if (supported) {
+      clearTimeout(restartTimer);
+      restartTimer = setTimeout(() => _startRecognition(), 200);
+    }
+  };
   window.speechSynthesis.speak(utterance);
 }

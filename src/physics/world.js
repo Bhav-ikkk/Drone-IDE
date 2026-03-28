@@ -7,7 +7,7 @@ export async function initPhysicsWorld() {
   await RAPIER.init();
   rapierReady = true;
 
-  const gravity = { x: 0.0, y: -9.81, z: 0.0 };
+  const gravity = { x: 0.0, y: 0.0, z: 0.0 };
   world = new RAPIER.World(gravity);
   world.timestep = 1 / 60;
 

@@ -641,7 +641,7 @@ function handleGestureState(gestureData, dt) {
 
     case 'TWO_FINGER_SWIPE':
       if (gestureData.swipeDelta) {
-        orbitCamera(gestureData.swipeDelta.x * 0.5);
+        orbitCamera(gestureData.swipeDelta.x * 3, gestureData.swipeDelta.y * 3);
       }
       break;
 
@@ -803,6 +803,9 @@ function isFiniteVector3(vec) {
 function releaseDrag() {
   if (draggedPart) {
     draggedPart.rigidBody.setBodyType(0, true); // Dynamic
+    // Zero out velocities so part stays where it was placed
+    draggedPart.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    draggedPart.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
     draggedPart = null;
   }
   isDragging = false;

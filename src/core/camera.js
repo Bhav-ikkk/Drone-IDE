@@ -52,6 +52,15 @@ export function updateCamera(dt, droneCenter) {
   controls.update();
 }
 
-export function orbitCamera(deltaX) {
-  // No-op — OrbitControls handles orbiting now
+export function orbitCamera(deltaX, deltaY = 0) {
+  if (!controls || !camera) return;
+  const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+  const spherical = new THREE.Spherical().setFromVector3(offset);
+
+  spherical.theta -= deltaX;
+  spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi - deltaY));
+
+  offset.setFromSpherical(spherical);
+  camera.position.copy(controls.target).add(offset);
+  controls.update();
 }

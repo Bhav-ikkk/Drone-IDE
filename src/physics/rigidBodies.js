@@ -116,8 +116,8 @@ export function applyExplosionImpulse(rigidBody, center, magnitude = 15) {
   const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.1;
   dx /= len; dy /= len; dz /= len;
 
-  // Add slight upward bias
-  dy += 0.3;
+  // Slight downward bias so parts settle lower (no world gravity)
+  dy -= 0.1;
 
   const force = magnitude + Math.random() * 3;
   rigidBody.applyImpulse({ x: dx * force, y: dy * force, z: dz * force }, true);
@@ -129,9 +129,9 @@ export function applyExplosionImpulse(rigidBody, center, magnitude = 15) {
     z: (Math.random() - 0.5) * 2,
   }, true);
 
-  // Air friction damping for natural scatter
-  rigidBody.setLinearDamping(0.6);
-  rigidBody.setAngularDamping(1.5);
+  // Air friction damping — higher values so parts settle quickly without gravity
+  rigidBody.setLinearDamping(2.0);
+  rigidBody.setAngularDamping(3.0);
 }
 
 /**

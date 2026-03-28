@@ -20,6 +20,8 @@ export function applyMotorTorque(active) {
   const parts = getDroneParts();
   for (const part of parts) {
     if (!part.rigidBody) continue;
+    // Skip kinematic bodies — torque has no effect on them
+    if (part.rigidBody.bodyType() === 2) continue;
 
     if (part.id === 'motor1' || part.id === 'motor3') {
       // CW spin
